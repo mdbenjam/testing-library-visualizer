@@ -8,7 +8,7 @@ const fastify = Fastify({
 });
 
 fastify.register(fastifyStatic, {
-  root: path.join(__dirname, "build", "static", "css"),
+  root: path.join(__dirname, "..", "build", "static", "css"),
   prefix: "/", // optional: default '/'
 });
 
@@ -16,6 +16,7 @@ var isListening = false;
 
 fastify.get("/initial_html", async (request, reply) => {
   console.log(document.documentElement.innerHTML);
+  console.log("hi");
   return document.documentElement.innerHTML;
 });
 

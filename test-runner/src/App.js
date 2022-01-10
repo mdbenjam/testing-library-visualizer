@@ -14,7 +14,7 @@ function App() {
 
   return (
     <div className="container">
-      <link rel="stylesheet" type="text/css" href="/styling.css" />
+      <link rel="stylesheet" type="text/css" href="/styling" />
       <div className="app" dangerouslySetInnerHTML={{ __html: innerHTML }} />
       <div className="console">
         <input onChange={(event) => setCommand(event.value)} value={command} />

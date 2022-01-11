@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import fastifyStatic from "fastify-static";
 import path from "path";
+import fs from "fs";
 import { screen } from "@testing-library/react";
 
 const fastify = Fastify({
@@ -8,15 +9,40 @@ const fastify = Fastify({
 });
 
 fastify.register(fastifyStatic, {
-  root: path.join(__dirname, "build", "static", "css"),
+  root: path.join(__dirname, "..", "build"),
   prefix: "/", // optional: default '/'
+  wildcard: true,
 });
 
 var isListening = false;
+var manifest = {};
 
-fastify.get("/initial_html", async (request, reply) => {
+async function getCssFiles() {
+  const rawdata = fs.readFileSync(
+    path.join(__dirname, "..", "build", "asset-manifest.json")
+  );
+  manifest = JSON.parse(rawdata).files;
+}
+
+export function replaceFilePaths(html, manifest) {
+  const srcReplaced = html.replace(/src=\"(.*?)\"/, (_match, p1) => {
+    return `src="${manifest[p1] || manifest["static/media/" + p1] || p1}"`;
+  });
+
+  const hrefReplaced = srcReplaced.replace(/href=\"(.*?)\"/, (_match, p1) => {
+    return `href="${manifest[p1] || manifest["static/media/" + p1] || p1}"`;
+  });
+
+  return hrefReplaced;
+}
+
+fastify.get("/load", async (request, reply) => {
   console.log(document.documentElement.innerHTML);
-  return document.documentElement.innerHTML;
+
+  return {
+    html: replaceFilePaths(document.documentElement.innerHTML, manifest),
+    cssFiles: [manifest["main.css"]],
+  };
 });
 
 fastify.get("/styling", async (request, reply) => {
@@ -29,13 +55,26 @@ fastify.get("/stop", async (request, reply) => {
   return "stopping";
 });
 
+fastify.post("/command", async (request, reply) => {
+  console.log(request.body);
+  return {
+    html: replaceFilePaths(document.documentElement.innerHTML, manifest),
+  };
+});
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export const stop = () => {
+  console.log("stopping");
+  fastify.close();
+};
+
 export const start = async () => {
   try {
     isListening = true;
+    await getCssFiles();
     await fastify.listen(3001);
     console.log("opening");
     while (isListening) {

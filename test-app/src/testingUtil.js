@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import fastifyStatic from "fastify-static";
 import path from "path";
+import fs from "fs";
 import { screen } from "@testing-library/react";
 
 const fastify = Fastify({
@@ -8,16 +9,29 @@ const fastify = Fastify({
 });
 
 fastify.register(fastifyStatic, {
-  root: path.join(__dirname, "..", "build", "static", "css"),
+  root: path.join(__dirname, "..", "build"),
   prefix: "/", // optional: default '/'
+  wildcard: true,
 });
 
 var isListening = false;
+var cssFileNames = [];
 
-fastify.get("/initial_html", async (request, reply) => {
+async function getCssFiles() {
+  cssFileNames = (
+    await fs.promises.readdir(
+      path.join(__dirname, "..", "build", "static", "css")
+    )
+  )
+    .filter((fileName) => fileName.endsWith("css"))
+    .map((fileName) => `static/css/${fileName}`);
+}
+
+fastify.get("/load", async (request, reply) => {
   console.log(document.documentElement.innerHTML);
+
   console.log("hi");
-  return document.documentElement.innerHTML;
+  return { html: document.documentElement.innerHTML, cssFiles: cssFileNames };
 });
 
 fastify.get("/styling", async (request, reply) => {
@@ -37,6 +51,7 @@ function sleep(ms) {
 export const start = async () => {
   try {
     isListening = true;
+    await getCssFiles();
     await fastify.listen(3001);
     console.log("opening");
     while (isListening) {

@@ -5,16 +5,20 @@ import axios from "axios";
 
 function App() {
   const [command, setCommand] = useState();
-  const [innerHTML, setInnerHTML] = useState();
+  const [innerHTML, setInnerHTML] = useState(null);
+  const [cssFiles, setCssFiles] = useState([]);
   useEffect(() => {
-    axios.get("/initial_html").then((response) => {
-      setInnerHTML(response.data);
+    axios.get("/load").then((response) => {
+      setInnerHTML(response.data.html);
+      setCssFiles(response.data.cssFiles);
     });
-  });
+  }, []);
 
   return (
     <div className="container">
-      <link rel="stylesheet" type="text/css" href="/styling" />
+      {cssFiles.map((file) => (
+        <link rel="stylesheet" type="text/css" href={file} />
+      ))}
       <div className="app" dangerouslySetInnerHTML={{ __html: innerHTML }} />
       <div className="console">
         <input onChange={(event) => setCommand(event.value)} value={command} />

@@ -5,6 +5,7 @@
   "dependencies": {
     "@testing-library/jest-dom": "^5.16.1",
     "@testing-library/user-event": "^13.5.0",
+    "acorn": "^8.7.0",
     "fastify": "^3.25.0",
     "fastify-static": "^4.5.0",
     "prettier": "^2.5.1",

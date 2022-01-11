@@ -15,23 +15,34 @@ fastify.register(fastifyStatic, {
 });
 
 var isListening = false;
-var cssFileNames = [];
+var manifest = {};
 
 async function getCssFiles() {
-  cssFileNames = (
-    await fs.promises.readdir(
-      path.join(__dirname, "..", "build", "static", "css")
-    )
-  )
-    .filter((fileName) => fileName.endsWith("css"))
-    .map((fileName) => `static/css/${fileName}`);
+  const rawdata = fs.readFileSync(
+    path.join(__dirname, "..", "build", "asset-manifest.json")
+  );
+  manifest = JSON.parse(rawdata).files;
+}
+
+export function replaceFilePaths(html, manifest) {
+  const srcReplaced = html.replace(/src=\"(.*?)\"/, (_match, p1) => {
+    return `src="${manifest[p1] || manifest["static/media/" + p1] || p1}"`;
+  });
+
+  const hrefReplaced = srcReplaced.replace(/href=\"(.*?)\"/, (_match, p1) => {
+    return `href="${manifest[p1] || manifest["static/media/" + p1] || p1}"`;
+  });
+
+  return hrefReplaced;
 }
 
 fastify.get("/load", async (request, reply) => {
   console.log(document.documentElement.innerHTML);
 
-  console.log("hi");
-  return { html: document.documentElement.innerHTML, cssFiles: cssFileNames };
+  return {
+    html: replaceFilePaths(document.documentElement.innerHTML, manifest),
+    cssFiles: [manifest["main.css"]],
+  };
 });
 
 fastify.get("/styling", async (request, reply) => {
@@ -44,9 +55,21 @@ fastify.get("/stop", async (request, reply) => {
   return "stopping";
 });
 
+fastify.post("/command", async (request, reply) => {
+  console.log(request.body);
+  return {
+    html: replaceFilePaths(document.documentElement.innerHTML, manifest),
+  };
+});
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+export const stop = () => {
+  console.log("stopping");
+  fastify.close();
+};
 
 export const start = async () => {
   try {

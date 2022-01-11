@@ -10,3 +10,7 @@
 .app {
   border: 1px solid black;
 }
+
+.react-test-highlight-element {
+  border: 1px solid red;
+}

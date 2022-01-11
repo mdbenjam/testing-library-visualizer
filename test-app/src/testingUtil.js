@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import fastifyStatic from "fastify-static";
 import path from "path";
 import fs from "fs";
-import { screen } from "@testing-library/react";
+import { runCommand } from "./commandParser";
 
 const fastify = Fastify({
   logger: true,
@@ -57,6 +57,8 @@ fastify.get("/stop", async (request, reply) => {
 
 fastify.post("/command", async (request, reply) => {
   console.log(request.body);
+  runCommand(request.body.command);
+
   return {
     html: replaceFilePaths(document.documentElement.innerHTML, manifest),
   };

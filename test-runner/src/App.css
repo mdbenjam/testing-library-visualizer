@@ -1,6 +1,6 @@
 .container {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
 }
 
 .console {
@@ -9,8 +9,12 @@
 
 .app {
   border: 1px solid black;
+  flex: 1;
+  height: 100vh;
+  overflow-y: scroll;
 }
 
 .react-test-highlight-element {
   border: 1px solid red;
+  flex: 1;
 }

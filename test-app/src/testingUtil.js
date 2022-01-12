@@ -57,10 +57,14 @@ fastify.get("/stop", async (request, reply) => {
 
 fastify.post("/command", async (request, reply) => {
   console.log(request.body);
-  runCommand(request.body.command);
+  const output = runCommand(request.body.command);
 
   return {
     html: replaceFilePaths(document.documentElement.innerHTML, manifest),
+    error: output.error && {
+      name: output.error.name,
+      message: output.error.message,
+    },
   };
 });
 

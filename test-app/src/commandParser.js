@@ -39,28 +39,41 @@ function traverseTree(node) {
   }
 
   if (node.type === "Identifier") {
-    return IDENTIFIER_MAP[node.name];
+    if (IDENTIFIER_MAP[node.name]) {
+      return IDENTIFIER_MAP[node.name];
+    } else {
+      throw new TypeError(`"${node.name}" is not valid`);
+    }
   }
 
   if (node.type === "CallExpression") {
     const func = traverseTree(node.callee);
-
     return func(...node.arguments.map((arg) => traverseTree(arg)));
   }
 
   if (node.type === "MemberExpression") {
-    return traverseTree(node.object)[node.property.name];
+    const treeTraversal = traverseTree(node.object);
+    const result = treeTraversal[node.property.name];
+    if (result) {
+      return result;
+    } else {
+      throw new TypeError(`"${node.property.name}" is not a valid property.`);
+    }
   }
 }
 
 export function runCommand(string) {
   const parseTree = acorn.parse(string, { ecmaVersion: 2020 });
+  try {
+    if (parseTree.type !== "Program") {
+      throw SyntaxError;
+    }
 
-  if (parseTree.type !== "Program") {
-    throw SyntaxError;
+    parseTree.body.forEach((statement) => {
+      traverseTree(statement);
+    });
+    return { ok: true, error: null };
+  } catch (error) {
+    return { ok: false, error };
   }
-
-  parseTree.body.forEach((statement) => {
-    traverseTree(statement);
-  });
 }

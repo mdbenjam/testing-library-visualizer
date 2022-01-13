@@ -7,7 +7,10 @@ let acorn = require("acorn");
 test("parses simple command", async () => {
   render(<>Hello World</>);
 
-  runCommand('expect(screen.getByText("Hello World")).toBeInTheDocument();');
+  expect(
+    runCommand('expect(screen.getByText("Hello World")).toBeInTheDocument();')
+      .error
+  ).toBeNull();
 });
 
 test("parses within command", async () => {
@@ -18,16 +21,34 @@ test("parses within command", async () => {
     </>
   );
 
-  runCommand(
-    'expect(within(screen.getByTestId("first-div")).getByText("Hello")).toBeInTheDocument();'
-  );
-  runCommand(
-    'expect(within(screen.getByTestId("first-div")).queryByText("World")).toBeNull();'
-  );
+  expect(
+    runCommand(
+      'expect(within(screen.getByTestId("first-div")).getByText("Hello")).toBeInTheDocument();'
+    ).error
+  ).toBeNull();
+  expect(
+    runCommand(
+      'expect(within(screen.getByTestId("first-div")).queryByText("World")).toBeNull();'
+    ).error
+  ).toBeNull();
 });
 
 test("parses regex command", async () => {
   render(<>Hello World</>);
 
-  runCommand("expect(screen.getByText(/Hello/)).toBeInTheDocument();");
+  expect(
+    runCommand("expect(screen.getByText(/Hello/)).toBeInTheDocument();").error
+  ).toBeNull();
+});
+
+test("parses await command", async () => {
+  render(<>Hello World</>);
+  setTimeout(() => {
+    render(<>Goodbye</>);
+  }, 100);
+  expect(
+    await runCommand(
+      "expect(await screen.findByText(/Hello/)).toBeInTheDocument();"
+    ).error
+  ).toBeNull();
 });

@@ -12,6 +12,9 @@ function highlight(node) {
   highlightedNodes.forEach((node) =>
     node.classList.remove(HIGHLIGHT_CLASS_NAME)
   );
+  if (!node) {
+    throw ReferenceError("Cannot not highlight undefined element");
+  }
   if (Array.isArray(node)) {
     highlightedNodes = node;
   } else {
@@ -29,9 +32,14 @@ const IDENTIFIER_MAP = {
   highlight,
 };
 
-function traverseTree(node) {
+async function traverseTree(node) {
   if (node.type === "ExpressionStatement") {
     traverseTree(node.expression);
+  }
+
+  if (node.type === "AwaitExpression") {
+    console.log(node.argument);
+    return await traverseTree(node.argument);
   }
 
   if (node.type === "Literal") {
@@ -62,18 +70,22 @@ function traverseTree(node) {
   }
 }
 
-export function runCommand(string) {
-  const parseTree = acorn.parse(string, { ecmaVersion: 2020 });
-  try {
-    if (parseTree.type !== "Program") {
-      throw SyntaxError;
-    }
+export async function runCommand(string) {
+  const parseTree = acorn.parse(string, {
+    ecmaVersion: 2020,
+    allowAwaitOutsideFunction: true,
+  });
+  console.log(util.inspect(parseTree, false, null, true));
+  // try {
+  //   if (parseTree.type !== "Program") {
+  //     throw SyntaxError;
+  //   }
 
-    parseTree.body.forEach((statement) => {
-      traverseTree(statement);
-    });
-    return { ok: true, error: null };
-  } catch (error) {
-    return { ok: false, error };
-  }
+  //   await parseTree.body.forEach(async (statement) => {
+  //     await traverseTree(statement);
+  //   });
+  //   return { ok: true, error: null };
+  // } catch (error) {
+  //   return { ok: false, error };
+  // }
 }

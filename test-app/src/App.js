@@ -4,6 +4,7 @@ import "./App.css";
 
 function App() {
   const [counter, setCounter] = useState(0);
+  const [delayedUpdate, setDelayedUpdate] = useState("incomplete");
   return (
     <div className="App">
       <header className="App-header">
@@ -22,6 +23,16 @@ function App() {
       </header>
       <div>Counter: {counter}</div>
       <button onClick={() => setCounter(counter + 1)}>Increment counter</button>
+      <div>Delayed update: {delayedUpdate}</div>
+      <button
+        onClick={() =>
+          setTimeout(() => {
+            setDelayedUpdate("complete");
+          }, 1000)
+        }
+      >
+        Trigger delayed update
+      </button>
     </div>
   );
 }

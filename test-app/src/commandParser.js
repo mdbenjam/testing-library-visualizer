@@ -34,11 +34,10 @@ const IDENTIFIER_MAP = {
 
 async function traverseTree(node) {
   if (node.type === "ExpressionStatement") {
-    traverseTree(node.expression);
+    await traverseTree(node.expression);
   }
 
   if (node.type === "AwaitExpression") {
-    console.log(node.argument);
     return await traverseTree(node.argument);
   }
 
@@ -55,13 +54,18 @@ async function traverseTree(node) {
   }
 
   if (node.type === "CallExpression") {
-    const func = traverseTree(node.callee);
-    return func(...node.arguments.map((arg) => traverseTree(arg)));
+    const func = await traverseTree(node.callee);
+    const args = await Promise.all(
+      node.arguments.map(async (arg) => await traverseTree(arg))
+    );
+    const output = await func(...args);
+    return output;
   }
 
   if (node.type === "MemberExpression") {
-    const treeTraversal = traverseTree(node.object);
+    const treeTraversal = await traverseTree(node.object);
     const result = treeTraversal[node.property.name];
+
     if (result) {
       return result;
     } else {
@@ -75,17 +79,18 @@ export async function runCommand(string) {
     ecmaVersion: 2020,
     allowAwaitOutsideFunction: true,
   });
-  console.log(util.inspect(parseTree, false, null, true));
-  // try {
-  //   if (parseTree.type !== "Program") {
-  //     throw SyntaxError;
-  //   }
 
-  //   await parseTree.body.forEach(async (statement) => {
-  //     await traverseTree(statement);
-  //   });
-  //   return { ok: true, error: null };
-  // } catch (error) {
-  //   return { ok: false, error };
-  // }
+  try {
+    if (parseTree.type !== "Program") {
+      throw SyntaxError;
+    }
+
+    for (const statement of parseTree.body) {
+      console.log(await traverseTree(statement));
+    }
+
+    return { ok: true, error: null };
+  } catch (error) {
+    return { ok: false, error };
+  }
 }

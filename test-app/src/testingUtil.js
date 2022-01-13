@@ -18,19 +18,22 @@ var isListening = false;
 var manifest = {};
 
 async function getCssFiles() {
-  const manifestFileLocation = path.join(__dirname, "..", "build", "asset-manifest.json");
+  const manifestFileLocation = path.join(
+    __dirname,
+    "..",
+    "build",
+    "asset-manifest.json"
+  );
 
   if (fs.existsSync(manifestFileLocation)) {
-
-    const rawdata = fs.readFileSync(
-      manifestFileLocation
-    );
+    const rawdata = fs.readFileSync(manifestFileLocation);
     manifest = JSON.parse(rawdata).files;
   } else {
-    console.warn("Could not find asset-manifest.json, this likely means you haven't run `npm run build`. Run `npm run build` in order to see styling and assets.")
-    manifest = {}
+    console.warn(
+      "Could not find asset-manifest.json, this likely means you haven't run `npm run build`. Run `npm run build` in order to see styling and assets."
+    );
+    manifest = {};
   }
-
 }
 
 export function replaceFilePaths(html, manifest) {
@@ -66,7 +69,7 @@ fastify.get("/stop", async (request, reply) => {
 
 fastify.post("/command", async (request, reply) => {
   console.log(request.body);
-  const output = runCommand(request.body.command);
+  const output = await runCommand(request.body.command);
 
   return {
     html: replaceFilePaths(document.documentElement.innerHTML, manifest),
@@ -97,7 +100,7 @@ export const start = async () => {
     }
     console.log("closing");
   } catch (err) {
-    console.error(err)
+    console.error(err);
     fastify.log.error(err);
     process.exit(1);
   }

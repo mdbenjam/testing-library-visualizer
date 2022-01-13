@@ -8,8 +8,11 @@ test("parses simple command", async () => {
   render(<>Hello World</>);
 
   expect(
-    runCommand('expect(screen.getByText("Hello World")).toBeInTheDocument();')
-      .error
+    (
+      await runCommand(
+        'expect(screen.getByText("Hello World")).toBeInTheDocument();'
+      )
+    ).error
   ).toBeNull();
 });
 
@@ -22,13 +25,17 @@ test("parses within command", async () => {
   );
 
   expect(
-    runCommand(
-      'expect(within(screen.getByTestId("first-div")).getByText("Hello")).toBeInTheDocument();'
+    (
+      await runCommand(
+        'expect(within(screen.getByTestId("first-div")).getByText("Hello")).toBeInTheDocument();'
+      )
     ).error
   ).toBeNull();
   expect(
-    runCommand(
-      'expect(within(screen.getByTestId("first-div")).queryByText("World")).toBeNull();'
+    (
+      await runCommand(
+        'expect(within(screen.getByTestId("first-div")).queryByText("World")).toBeNull();'
+      )
     ).error
   ).toBeNull();
 });
@@ -37,7 +44,8 @@ test("parses regex command", async () => {
   render(<>Hello World</>);
 
   expect(
-    runCommand("expect(screen.getByText(/Hello/)).toBeInTheDocument();").error
+    (await runCommand("expect(screen.getByText(/Hello/)).toBeInTheDocument();"))
+      .error
   ).toBeNull();
 });
 
@@ -45,10 +53,12 @@ test("parses await command", async () => {
   render(<>Hello World</>);
   setTimeout(() => {
     render(<>Goodbye</>);
-  }, 100);
+  }, 200);
   expect(
-    await runCommand(
-      "expect(await screen.findByText(/Hello/)).toBeInTheDocument();"
+    (
+      await runCommand(
+        "expect(await screen.findByText(/Goodbye/)).toBeInTheDocument();"
+      )
     ).error
   ).toBeNull();
 });

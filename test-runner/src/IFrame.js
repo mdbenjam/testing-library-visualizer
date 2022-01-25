@@ -13,7 +13,12 @@ export const IFrame = ({ children, styleLinks }) => {
     >
       {mountNode &&
         createPortal(
-          <div dangerouslySetInnerHTML={{ __html: children }} />,
+          <>
+            <style type="text/css">
+              {".react-test-highlight-element {border: 1px solid red;flex: 1;}"}
+            </style>
+            <div dangerouslySetInnerHTML={{ __html: children }} />
+          </>,
           mountNode
         )}
     </iframe>

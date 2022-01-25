@@ -48,7 +48,8 @@ export function replaceFilePaths(html, manifest) {
   return hrefReplaced;
 }
 
-function addStyleLinks(html, cssFiles) {
+function addStyleLinks(html) {
+  const cssFiles = [manifest["main.css"]];
   const parser = new DOMParser();
   const newDoc = parser.parseFromString(html, "text/html");
   console.log(newDoc.head);
@@ -66,8 +67,7 @@ function addStyleLinks(html, cssFiles) {
 fastify.get("/load", async (request, reply) => {
   return {
     html: addStyleLinks(
-      replaceFilePaths(document.documentElement.innerHTML, manifest),
-      [manifest["main.css"]]
+      replaceFilePaths(document.documentElement.innerHTML, manifest)
     ),
   };
 });
@@ -82,7 +82,9 @@ fastify.post("/command", async (request, reply) => {
   const output = await runCommand(request.body.command);
 
   return {
-    html: replaceFilePaths(document.documentElement.innerHTML, manifest),
+    html: addStyleLinks(
+      replaceFilePaths(document.documentElement.innerHTML, manifest)
+    ),
     error: output.error && {
       name: output.error.name,
       message: output.error.message,

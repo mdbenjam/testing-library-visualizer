@@ -49,8 +49,6 @@ export function replaceFilePaths(html, manifest) {
 }
 
 fastify.get("/load", async (request, reply) => {
-  console.log(document.documentElement.innerHTML);
-
   return {
     html: replaceFilePaths(document.documentElement.innerHTML, manifest),
     cssFiles: [manifest["main.css"]],
@@ -68,7 +66,6 @@ fastify.get("/stop", async (request, reply) => {
 });
 
 fastify.post("/command", async (request, reply) => {
-  console.log(request.body);
   const output = await runCommand(request.body.command);
 
   return {

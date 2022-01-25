@@ -86,7 +86,7 @@ export async function runCommand(string) {
     }
 
     for (const statement of parseTree.body) {
-      console.log(await traverseTree(statement));
+      await traverseTree(statement);
     }
 
     return { ok: true, error: null };

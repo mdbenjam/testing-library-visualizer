@@ -1,8 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 
 import { runCommand } from "./commandParser";
-const util = require("util");
-let acorn = require("acorn");
 
 test("parses simple command", async () => {
   render(<>Hello World</>);

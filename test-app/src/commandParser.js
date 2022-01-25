@@ -12,6 +12,9 @@ function highlight(node) {
   highlightedNodes.forEach((node) =>
     node.classList.remove(HIGHLIGHT_CLASS_NAME)
   );
+  if (!node) {
+    throw ReferenceError("Cannot not highlight undefined element");
+  }
   if (Array.isArray(node)) {
     highlightedNodes = node;
   } else {
@@ -29,9 +32,13 @@ const IDENTIFIER_MAP = {
   highlight,
 };
 
-function traverseTree(node) {
+async function traverseTree(node) {
   if (node.type === "ExpressionStatement") {
-    traverseTree(node.expression);
+    await traverseTree(node.expression);
+  }
+
+  if (node.type === "AwaitExpression") {
+    return await traverseTree(node.argument);
   }
 
   if (node.type === "Literal") {
@@ -47,13 +54,18 @@ function traverseTree(node) {
   }
 
   if (node.type === "CallExpression") {
-    const func = traverseTree(node.callee);
-    return func(...node.arguments.map((arg) => traverseTree(arg)));
+    const func = await traverseTree(node.callee);
+    const args = await Promise.all(
+      node.arguments.map(async (arg) => await traverseTree(arg))
+    );
+    const output = await func(...args);
+    return output;
   }
 
   if (node.type === "MemberExpression") {
-    const treeTraversal = traverseTree(node.object);
+    const treeTraversal = await traverseTree(node.object);
     const result = treeTraversal[node.property.name];
+
     if (result) {
       return result;
     } else {
@@ -62,16 +74,21 @@ function traverseTree(node) {
   }
 }
 
-export function runCommand(string) {
-  const parseTree = acorn.parse(string, { ecmaVersion: 2020 });
+export async function runCommand(string) {
+  const parseTree = acorn.parse(string, {
+    ecmaVersion: 2020,
+    allowAwaitOutsideFunction: true,
+  });
+
   try {
     if (parseTree.type !== "Program") {
       throw SyntaxError;
     }
 
-    parseTree.body.forEach((statement) => {
-      traverseTree(statement);
-    });
+    for (const statement of parseTree.body) {
+      await traverseTree(statement);
+    }
+
     return { ok: true, error: null };
   } catch (error) {
     return { ok: false, error };

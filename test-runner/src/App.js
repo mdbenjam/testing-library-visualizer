@@ -1,17 +1,14 @@
-import logo from "./logo.svg";
 import "./App.css";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import CommandInput from "./CommandInput";
-
+import { IFrame } from "./IFrame";
 function App() {
   const [innerHTML, setInnerHTML] = useState(null);
-  const [cssFiles, setCssFiles] = useState([]);
 
   useEffect(() => {
     axios.get("/load").then((response) => {
       setInnerHTML(response.data.html);
-      setCssFiles(response.data.cssFiles);
     });
   }, []);
 
@@ -19,11 +16,9 @@ function App() {
     <div className="container">
       <div className="console">
         <CommandInput setInnerHTML={setInnerHTML} />
+        <button onClick={() => axios.post("/stop")}>Stop Test</button>
       </div>
-      {cssFiles.map((file) => (
-        <link key={file} rel="stylesheet" type="text/css" href={file} />
-      ))}
-      <div className="app" dangerouslySetInnerHTML={{ __html: innerHTML }} />
+      <IFrame className="app">{innerHTML}</IFrame>
     </div>
   );
 }

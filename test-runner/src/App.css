@@ -7,11 +7,12 @@
   height: 100px;
 }
 
-.app {
+.test-iframe {
   border: 1px solid black;
   flex: 1;
   height: 100vh;
   overflow-y: scroll;
+  width: 100%;
 }
 
 .react-test-highlight-element {

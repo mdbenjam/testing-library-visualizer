@@ -48,21 +48,34 @@ export function replaceFilePaths(html, manifest) {
   return hrefReplaced;
 }
 
+function addStyleLinks(html, cssFiles) {
+  const parser = new DOMParser();
+  const newDoc = parser.parseFromString(html, "text/html");
+  console.log(newDoc.head);
+  cssFiles.forEach((cssFile) => {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.type = "text/css";
+    link.href = cssFile;
+    newDoc.head.appendChild(link);
+  });
+
+  return newDoc.documentElement.innerHTML;
+}
+
 fastify.get("/load", async (request, reply) => {
   return {
-    html: replaceFilePaths(document.documentElement.innerHTML, manifest),
-    cssFiles: [manifest["main.css"]],
+    html: addStyleLinks(
+      replaceFilePaths(document.documentElement.innerHTML, manifest),
+      [manifest["main.css"]]
+    ),
   };
 });
 
-fastify.get("/styling", async (request, reply) => {
-  return reply.sendFile("main.073c9b0a.css");
-});
-
-fastify.get("/stop", async (request, reply) => {
+fastify.post("/stop", async (request, reply) => {
   isListening = false;
   fastify.close();
-  return "stopping";
+  return "stopping because of stop";
 });
 
 fastify.post("/command", async (request, reply) => {

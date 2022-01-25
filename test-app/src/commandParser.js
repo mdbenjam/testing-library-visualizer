@@ -23,6 +23,10 @@ function highlight(node) {
   highlightedNodes.forEach((node) => node.classList.add(HIGHLIGHT_CLASS_NAME));
 }
 
+function refresh() {
+  // This is a no op just to refresh the page
+}
+
 const IDENTIFIER_MAP = {
   screen,
   expect,
@@ -30,6 +34,7 @@ const IDENTIFIER_MAP = {
   userEvent,
   within,
   highlight,
+  refresh,
 };
 
 async function traverseTree(node) {

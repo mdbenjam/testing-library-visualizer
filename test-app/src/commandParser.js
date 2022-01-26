@@ -99,7 +99,9 @@ export async function runCommand(string) {
     }
 
     for (const statement of parseTree.body) {
-      await traverseTree(statement);
+      if (statement.trim().length > 0) {
+        await traverseTree(statement);
+      }
       lineNumber += 1;
     }
 

@@ -1,136 +1,184 @@
-import { useMemo, useEffect, useState, useCallback } from "react";
+import { useMemo, useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 
-import AceEditor from "react-ace";
+import { EditorState, EditorView, basicSetup } from "@codemirror/basic-setup";
+import { javascript } from "@codemirror/lang-javascript";
+import { CompletionContext, autocompletion } from "@codemirror/autocomplete";
+import { syntaxTree } from "@codemirror/language";
+import { tags, HighlightStyle } from "@codemirror/highlight";
+import {
+  oneDarkTheme,
+  oneDarkHighlightStyle,
+} from "@codemirror/theme-one-dark";
 
-import "ace-builds/src-noconflict/mode-javascript";
-// import "ace-builds/src-noconflict/snippets/javascript";
-import "ace-builds/src-noconflict/theme-tomorrow";
+const myHighlightStyle = HighlightStyle.define([
+  { tag: tags.keyword, color: "#fc6" },
+  { tag: tags.comment, color: "#f5d", fontStyle: "italic" },
+]);
 
-import langTools from "ace-builds/src-min-noconflict/ext-language_tools";
-var customCompleter = {
-  getCompletions: function (editor, session, pos, prefix, callback) {
-    callback(null, [
-      {
-        name: "screen",
-        value: "screen",
-        score: 1,
-        meta: "The screen object in react testing library",
-      },
-      {
-        name: "getByText",
-        value: "getByText",
-        score: 1,
-        meta: "The getByText object in react testing library",
-      },
-    ]);
-  },
-};
-langTools.addCompleter(customCompleter);
+const completePropertyAfter = ["PropertyName", ".", "?."];
+const dontCompleteIn = [
+  "TemplateString",
+  "LineComment",
+  "BlockComment",
+  "VariableDefinition",
+  "PropertyDefinition",
+];
 
-function CommandInput({ setInnerHTML }) {
+function completeProperties(from: number, object: Object) {
+  let options = [];
+  for (let name in object) {
+    options.push({
+      label: name,
+      type: typeof object[name] == "function" ? "function" : "variable",
+    });
+  }
+  return {
+    from,
+    options,
+    span: /^[\w$]*$/,
+  };
+}
+
+function CommandInput({ setInnerHTML, availableCommands }) {
   const [command, setCommand] = useState("");
   const [commandHistory, setCommandHistory] = useState([]);
   const [navigatingHistory, setNavigatingHistory] = useState(0);
-  const [editor, setEditor] = useState();
+  // const [editor, setEditor] = useState();
 
-  const onChange = (value) => {
-    console.log(command, value);
-    setCommand(value);
+  // const onChange = (value) => {
+  //   console.log(command, value);
+  //   setCommand(value);
+  // };
+
+  // const commandHistoryText = useMemo(
+  //   () => commandHistory.map((history) => history.command).join("\n"),
+  //   [commandHistory]
+  // );
+  // const annotations = useMemo(
+  //   () =>
+  //     commandHistory.reduce(
+  //       (acc, history) => {
+  //         if (history.error) {
+  //           acc.annotations.push({
+  //             row: acc.lineStart,
+  //             column: 0,
+  //             type: "error",
+  //             text: history.error.message.replace(
+  //               /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
+  //               ""
+  //             ),
+  //           });
+  //         }
+
+  //         acc.lineStart =
+  //           acc.lineStart + (history.command.match(/\n/g) || []).length + 1;
+  //         return acc;
+  //       },
+  //       { annotations: [], lineStart: 0 }
+  //     ).annotations,
+  //   [commandHistory]
+  // );
+
+  // useEffect(() => {
+  //   if (editor) {
+  //     editor.getSession().setAnnotations(annotations);
+  //   }
+  // }, [annotations]);
+
+  const editorDidMount = (editor, monaco) => {
+    console.log("editorDidMount", editor);
+    editor.focus();
   };
+
+  // console.log(annotations, commandHistoryText);
+  const options = {
+    selectOnLineNumbers: true,
+  };
+  const codeEditorRef = useRef();
+  const codeMirrorRef = useRef();
   const submit = useCallback(() => {
-    axios.post("/command", { command }).then((response) => {
-      setInnerHTML(response.data.html);
-      setCommandHistory([
-        ...commandHistory,
-        { command, error: response.data.error },
-      ]);
-    });
-  }, [command]);
+    axios
+      .post("/command", { command: codeMirrorRef.current.state.doc })
+      .then((response) => {
+        setInnerHTML(response.data.html);
+        setCommandHistory([
+          ...commandHistory,
+          { command, error: response.data.error },
+        ]);
+      });
+  }, [codeMirrorRef]);
 
-  const commandHistoryText = useMemo(
-    () => commandHistory.map((history) => history.command).join("\n"),
-    [commandHistory]
-  );
-  const annotations = useMemo(
-    () =>
-      commandHistory.reduce(
-        (acc, history) => {
-          if (history.error) {
-            acc.annotations.push({
-              row: acc.lineStart,
-              column: 0,
-              type: "error",
-              text: history.error.message.replace(
-                /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
-                ""
-              ),
-            });
-          }
-
-          acc.lineStart =
-            acc.lineStart + (history.command.match(/\n/g) || []).length + 1;
-          return acc;
-        },
-        { annotations: [], lineStart: 0 }
-      ).annotations,
-    [commandHistory]
+  const myCompletions = useCallback(
+    (context) => {
+      let nodeBefore = syntaxTree(context.state).resolveInner(context.pos, -1);
+      if (
+        completePropertyAfter.includes(nodeBefore.name) &&
+        nodeBefore.parent?.name === "MemberExpression"
+      ) {
+        let object = nodeBefore.parent.getChild("Expression");
+        if (object?.name === "VariableName") {
+          let from = /\./.test(nodeBefore.name)
+            ? nodeBefore.to
+            : nodeBefore.from;
+          let variableName = context.state.sliceDoc(object.from, object.to);
+          console.log(variableName, from);
+          return {
+            from,
+            options: (availableCommands[variableName] || []).map(
+              (property) => ({
+                label: property,
+                type: "function",
+              })
+            ),
+            span: /^[\w$]*$/,
+          };
+        }
+      } else if (nodeBefore.name === "VariableName") {
+        return {
+          from: nodeBefore.from,
+          options: (Object.keys(availableCommands) || []).map((keyword) => ({
+            label: keyword,
+            type: "function",
+          })),
+          span: /^[\w$]*$/,
+        };
+        // } else if (context.explicit && !dontCompleteIn.includes(nodeBefore.name)) {
+        //   return completeProperties(context.pos, window);
+      }
+      return null;
+    },
+    [availableCommands]
   );
 
   useEffect(() => {
-    if (editor) {
-      editor.getSession().setAnnotations(annotations);
+    if (codeEditorRef.current) {
+      let state = EditorState.create({
+        doc: "",
+        extensions: [
+          basicSetup,
+          javascript(),
+          autocompletion({ override: [myCompletions] }),
+          oneDarkHighlightStyle,
+          oneDarkTheme,
+        ],
+      });
+      if (codeMirrorRef.current) {
+        codeMirrorRef.current.destroy();
+      }
+      codeMirrorRef.current = new EditorView({
+        state,
+        parent: codeEditorRef.current,
+      });
+    } else if (codeMirrorRef.current) {
+      codeMirrorRef.current.destory();
     }
-  }, [annotations]);
-
-  console.log(annotations, commandHistoryText);
+  }, [codeEditorRef, codeMirrorRef, myCompletions]);
 
   return (
     <>
-      <h2>Command History</h2>
-      <AceEditor
-        readOnly
-        mode="javascript"
-        theme="tomorrow"
-        name="command line editor"
-        fontSize={16}
-        showPrintMargin={true}
-        showGutter={true}
-        value={commandHistoryText}
-        onLoad={setEditor}
-        setOptions={{
-          tabSize: 2,
-        }}
-      />
-      <h2>Command</h2>
-      <div
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && !event.shiftKey) {
-            submit();
-            event.preventDefault();
-            setCommand("");
-          }
-        }}
-      >
-        <AceEditor
-          placeholder="Placeholder Text"
-          mode="javascript"
-          theme="tomorrow"
-          name="command line editor"
-          maxLines={3}
-          onChange={onChange}
-          fontSize={16}
-          showPrintMargin={true}
-          showGutter={true}
-          highlightActiveLine={true}
-          value={command}
-          setOptions={{
-            tabSize: 2,
-          }}
-          enableBasicAutocompletion={true}
-          enableLiveAutocompletion={true}
-        />
-      </div>
+      <div className="code-editor" id="code-editor" ref={codeEditorRef} />
+      <button onClick={submit}>Submit</button>
     </>
   );
 }

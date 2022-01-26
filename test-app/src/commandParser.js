@@ -2,7 +2,6 @@ import { expect } from "@jest/globals";
 import { screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-const util = require("util");
 let acorn = require("acorn");
 
 const HIGHLIGHT_CLASS_NAME = "react-test-highlight-element";
@@ -35,6 +34,14 @@ const IDENTIFIER_MAP = {
   within,
   highlight,
   refresh,
+};
+
+export const availableCommands = () => {
+  return Object.entries(IDENTIFIER_MAP).reduce((newObject, [key, value]) => {
+    newObject[key] = Object.getOwnPropertyNames(value);
+
+    return newObject;
+  }, {});
 };
 
 async function traverseTree(node) {
@@ -84,6 +91,7 @@ export async function runCommand(string) {
     ecmaVersion: 2020,
     allowAwaitOutsideFunction: true,
   });
+  var lineNumber = 0;
 
   try {
     if (parseTree.type !== "Program") {
@@ -92,10 +100,11 @@ export async function runCommand(string) {
 
     for (const statement of parseTree.body) {
       await traverseTree(statement);
+      lineNumber += 1;
     }
 
-    return { ok: true, error: null };
+    return { ok: true, error: null, lineNumber: null };
   } catch (error) {
-    return { ok: false, error };
+    return { ok: false, error, lineNumber };
   }
 }

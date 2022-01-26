@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 
-import { runCommand } from "./commandParser";
+import { runCommand, availableCommands } from "./commandParser";
 
 test("parses simple command", async () => {
   render(<>Hello World</>);
@@ -59,4 +59,10 @@ test("parses await command", async () => {
       )
     ).error
   ).toBeNull();
+});
+
+test("availableCommands yields all commands", async () => {
+  expect(availableCommands().screen).toEqual(
+    expect.arrayContaining(["getByText"])
+  );
 });

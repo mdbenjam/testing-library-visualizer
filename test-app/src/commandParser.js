@@ -1,6 +1,7 @@
 import { expect } from "@jest/globals";
 import { screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+const util = require("util");
 
 let acorn = require("acorn");
 
@@ -87,10 +88,14 @@ async function traverseTree(node) {
 }
 
 export async function runCommand(string) {
-  const parseTree = acorn.parse(string, {
-    ecmaVersion: 2020,
-    allowAwaitOutsideFunction: true,
-  });
+  const parseTree = acorn.parse(
+    string.filter((str) => str !== ""),
+    {
+      ecmaVersion: 2020,
+      allowAwaitOutsideFunction: true,
+    }
+  );
+
   var lineNumber = 0;
 
   try {
@@ -99,9 +104,7 @@ export async function runCommand(string) {
     }
 
     for (const statement of parseTree.body) {
-      if (statement.trim().length > 0) {
-        await traverseTree(statement);
-      }
+      await traverseTree(statement);
       lineNumber += 1;
     }
 

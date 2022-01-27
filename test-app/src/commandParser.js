@@ -88,13 +88,10 @@ async function traverseTree(node) {
 }
 
 export async function runCommand(string) {
-  const parseTree = acorn.parse(
-    string.filter((str) => str !== ""),
-    {
-      ecmaVersion: 2020,
-      allowAwaitOutsideFunction: true,
-    }
-  );
+  const parseTree = acorn.parse(string, {
+    ecmaVersion: 2020,
+    allowAwaitOutsideFunction: true,
+  });
 
   var lineNumber = 0;
 

@@ -4,45 +4,38 @@ import axios from "axios";
 import Editor, { useEditor } from "./Editor";
 
 function CommandInput({ setInnerHTML, availableCommands }) {
-  const readOnlyEditorProps = useEditor();
-  const editorProps = useEditor();
-  const { codeMirrorRef, codeHistory, appendToHistory, setText } = editorProps;
+  // const readOnlyEditorProps = useEditor();
+  // const editorProps = useEditor();
+  // const { codeMirrorRef, codeHistory, appendToHistory, setText } = editorProps;
   const [commandHistory, setCommandHistory] = useState([]);
+  const [editorValue, setEditorValue] = useState("");
 
   const submit = useCallback(() => {
-    axios
-      .post("/command", { command: codeMirrorRef.current.state.doc })
-      .then((response) => {
-        setInnerHTML(response.data.html);
-        setCommandHistory([
-          ...commandHistory,
-          {
-            command: codeMirrorRef.current.state.doc,
-            error: response.data.error,
-          },
-        ]);
-        appendToHistory(codeMirrorRef.current.state.doc);
-        setText("");
-      });
-  }, [
-    codeMirrorRef,
-    appendToHistory,
-    setText,
-    commandHistory,
-    setCommandHistory,
-    setInnerHTML,
-  ]);
+    axios.post("/command", { command: editorValue }).then((response) => {
+      setInnerHTML(response.data.html);
+      setCommandHistory([
+        ...commandHistory,
+        {
+          command: editorValue,
+          error: response.data.error,
+        },
+      ]);
+      setEditorValue("");
+    });
+  }, [commandHistory, setCommandHistory, setInnerHTML, editorValue]);
 
   return (
     <>
       <Editor
-        {...readOnlyEditorProps}
-        text={commandHistory.map((history) => history.command).join("\n")}
+        content={commandHistory.map((history) => history.command).join("\n")}
+        availableCommands={availableCommands}
       />
       <Editor
-        {...editorProps}
-        submit={submit}
+        content={editorValue}
+        onContentChange={setEditorValue}
         availableCommands={availableCommands}
+        submit={submit}
+        commandHistory={commandHistory.map((history) => history.command)}
       />
       <button onClick={submit}>Submit</button>
     </>

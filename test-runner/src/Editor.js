@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useMemo } from "react";
 
 import {
   keymap,
@@ -7,7 +7,7 @@ import {
   highlightActiveLine,
   dropCursor,
 } from "@codemirror/view";
-import { EditorState } from "@codemirror/state";
+import { EditorState, StateField, StateEffect } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { history, historyKeymap } from "@codemirror/history";
 import { foldGutter, foldKeymap } from "@codemirror/fold";
@@ -67,21 +67,64 @@ export function useEditor() {
   return { codeMirrorRef, codeHistory, appendToHistory, setText };
 }
 
+const submitFunctionEffect = StateEffect.define({});
+const submitFunctionState = StateField.define({
+  create() {
+    return { submitFunction: () => {} };
+  },
+  update(value, transaction) {
+    for (const effect of transaction.effects) {
+      if (effect.is(submitFunctionEffect)) {
+        return effect.value;
+      }
+    }
+    return value;
+  },
+});
+
+const updateCommandHistoryEffect = StateEffect.define({});
+const updateHistoryIndexEffect = StateEffect.define({});
+const commandHistoryState = StateField.define({
+  create() {
+    return { index: 0, commandHistory: [] };
+  },
+  update(value, transaction) {
+    console.log(value, transaction);
+    for (const effect of transaction.effects) {
+      if (effect.is(updateCommandHistoryEffect)) {
+        return { ...value, commandHistory: effect.value.commandHistory };
+      }
+      if (effect.is(updateHistoryIndexEffect)) {
+        return { ...value, index: effect.value.index };
+      }
+    }
+    return value;
+  },
+});
+
 export default function Editor({
-  codeMirrorRef,
-  codeHistory,
-  setText,
+  onContentChange,
   availableCommands,
   submit,
-  text,
+  content,
+  commandHistory,
 }) {
-  useEffect(() => {
-    if (setText) {
-      setText(text);
-    }
-  }, [text, setText]);
-
   const codeEditorRef = useRef();
+  const { codeMirrorRef, codeHistory } = useEditor();
+
+  useEffect(() => {
+    if (!codeMirrorRef.current) return;
+    codeMirrorRef.current.dispatch({
+      effects: submitFunctionEffect.of({ submit }),
+    });
+  }, [submit, codeMirrorRef]);
+
+  useEffect(() => {
+    if (!codeMirrorRef.current) return;
+    codeMirrorRef.current.dispatch({
+      effects: updateCommandHistoryEffect.of({ commandHistory }),
+    });
+  }, [commandHistory, codeMirrorRef]);
 
   const myCompletions = useCallback(
     (context) => {
@@ -124,38 +167,69 @@ export default function Editor({
   );
 
   useEffect(() => {
+    if (!codeMirrorRef.current) return;
+
+    const doc = codeMirrorRef.current.state.doc;
+
+    // Don't update the document if it's equal to the `content` prop.
+    // Otherwise it would reset the cursor position.
+    const currentDocument = doc.toString();
+    if (content === currentDocument) return;
+
+    codeMirrorRef.current.dispatch({
+      changes: { from: 0, to: doc.length, insert: content },
+    });
+  }, [content, codeMirrorRef]);
+
+  const updateListener = useMemo(() => {
+    return EditorView.updateListener.of((update) => {
+      if (
+        !update.docChanged ||
+        !onContentChange ||
+        typeof onContentChange !== "function"
+      )
+        return;
+      console.log(update);
+      onContentChange(update.state.doc.toString());
+    });
+  }, [onContentChange]);
+
+  useEffect(() => {
     if (codeEditorRef.current) {
       const ctrlCursorArrowUp = (props) => {
         const { state, dispatch } = props;
-        codeHistory.current.index = Math.min(
-          codeHistory.current.index + 1,
-          codeHistory.current.history.length
+        const commandHistory = state.field(commandHistoryState);
+
+        const newIndex = Math.min(
+          commandHistory.index + 1,
+          commandHistory.commandHistory.length
         );
-        const transaction = state.update({
+        console.log(commandHistory.commandHistory[newIndex - 1], newIndex);
+        dispatch({
+          effects: updateHistoryIndexEffect.of({ index: newIndex }),
           changes: {
             from: 0,
             to: state.doc.length,
-            insert: codeHistory.current.history[codeHistory.current.index - 1],
+            insert: commandHistory.commandHistory[newIndex - 1],
           },
         });
-        dispatch(transaction);
       };
 
       const ctrlCursorArrowDown = (props) => {
         const { state, dispatch } = props;
-        codeHistory.current.index = Math.max(codeHistory.current.index - 1, 0);
+        const commandHistory = state.field(commandHistoryState);
 
-        const transaction = state.update({
+        const newIndex = Math.max(commandHistory.index - 1, 0);
+        console.log(commandHistory, newIndex);
+        dispatch({
+          effects: updateHistoryIndexEffect.of({ index: newIndex }),
           changes: {
             from: 0,
             to: state.doc.length,
             insert:
-              codeHistory.current.index === 0
-                ? ""
-                : codeHistory.current.history[codeHistory.current.index - 1],
+              newIndex === 0 ? "" : commandHistory.commandHistory[newIndex - 1],
           },
         });
-        dispatch(transaction);
       };
 
       const previousCommandsKeyMap = [
@@ -177,7 +251,9 @@ export default function Editor({
         {
           key: "Ctrl-Enter",
           mac: "Cmd-Enter",
-          run: submit,
+          run: ({ state }) => {
+            state.field(submitFunctionState).submit();
+          },
           preventDefault: true,
         },
       ];
@@ -217,6 +293,9 @@ export default function Editor({
           oneDarkHighlightStyle,
           oneDarkTheme,
           fixedHeightEditor,
+          updateListener,
+          submitFunctionState,
+          commandHistoryState,
         ],
       });
       if (codeMirrorRef.current) {
@@ -228,11 +307,17 @@ export default function Editor({
       });
       codeMirrorRef.current.focus();
     }
-  }, [codeEditorRef, codeMirrorRef, myCompletions, submit, codeHistory]);
+  }, [
+    codeEditorRef,
+    codeMirrorRef,
+    myCompletions,
+    codeHistory,
+    updateListener,
+  ]);
 
   useEffect(() => {
     return () => {
-      codeMirrorRef.current.destory();
+      if (codeMirrorRef.current) codeMirrorRef.current.destory();
     };
   }, []);
   return (

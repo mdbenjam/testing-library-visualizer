@@ -1,8 +1,8 @@
 import { expect } from "@jest/globals";
 import { screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-
 const util = require("util");
+
 let acorn = require("acorn");
 
 const HIGHLIGHT_CLASS_NAME = "react-test-highlight-element";
@@ -23,6 +23,10 @@ function highlight(node) {
   highlightedNodes.forEach((node) => node.classList.add(HIGHLIGHT_CLASS_NAME));
 }
 
+function refresh() {
+  // This is a no op just to refresh the page
+}
+
 const IDENTIFIER_MAP = {
   screen,
   expect,
@@ -30,6 +34,15 @@ const IDENTIFIER_MAP = {
   userEvent,
   within,
   highlight,
+  refresh,
+};
+
+export const availableCommands = () => {
+  return Object.entries(IDENTIFIER_MAP).reduce((newObject, [key, value]) => {
+    newObject[key] = Object.getOwnPropertyNames(value);
+
+    return newObject;
+  }, {});
 };
 
 async function traverseTree(node) {
@@ -80,6 +93,8 @@ export async function runCommand(string) {
     allowAwaitOutsideFunction: true,
   });
 
+  var lineNumber = 0;
+
   try {
     if (parseTree.type !== "Program") {
       throw SyntaxError;
@@ -87,10 +102,11 @@ export async function runCommand(string) {
 
     for (const statement of parseTree.body) {
       await traverseTree(statement);
+      lineNumber += 1;
     }
 
-    return { ok: true, error: null };
+    return { ok: true, error: null, lineNumber: null };
   } catch (error) {
-    return { ok: false, error };
+    return { ok: false, error, lineNumber };
   }
 }

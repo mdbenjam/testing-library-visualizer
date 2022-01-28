@@ -2,7 +2,8 @@ import Fastify from "fastify";
 import fastifyStatic from "fastify-static";
 import path from "path";
 import fs from "fs";
-import { runCommand } from "./commandParser";
+import { runCommand, availableCommands } from "./commandParser";
+import { cleanup } from "@testing-library/react";
 
 const fastify = Fastify({
   logger: true,
@@ -16,6 +17,7 @@ fastify.register(fastifyStatic, {
 
 var isListening = false;
 var manifest = {};
+var resetFunction = null;
 
 async function getCssFiles() {
   const manifestFileLocation = path.join(
@@ -48,31 +50,57 @@ export function replaceFilePaths(html, manifest) {
   return hrefReplaced;
 }
 
+function addStyleLinks(html) {
+  const cssFiles = [manifest["main.css"]];
+  const parser = new DOMParser();
+  const newDoc = parser.parseFromString(html, "text/html");
+
+  cssFiles.forEach((cssFile) => {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.type = "text/css";
+    link.href = cssFile;
+    newDoc.head.appendChild(link);
+  });
+
+  return newDoc.documentElement.innerHTML;
+}
+
 fastify.get("/load", async (request, reply) => {
   return {
-    html: replaceFilePaths(document.documentElement.innerHTML, manifest),
-    cssFiles: [manifest["main.css"]],
+    html: addStyleLinks(
+      replaceFilePaths(document.documentElement.innerHTML, manifest)
+    ),
+    availableCommands: availableCommands(),
   };
 });
 
-fastify.get("/styling", async (request, reply) => {
-  return reply.sendFile("main.073c9b0a.css");
-});
-
-fastify.get("/stop", async (request, reply) => {
+fastify.post("/stop", async (request, reply) => {
   isListening = false;
   fastify.close();
-  return "stopping";
+});
+
+fastify.post("/reset", async (request, reply) => {
+  cleanup();
+  resetFunction();
+  return {
+    html: addStyleLinks(
+      replaceFilePaths(document.documentElement.innerHTML, manifest)
+    ),
+  };
 });
 
 fastify.post("/command", async (request, reply) => {
   const output = await runCommand(request.body.command);
 
   return {
-    html: replaceFilePaths(document.documentElement.innerHTML, manifest),
+    html: addStyleLinks(
+      replaceFilePaths(document.documentElement.innerHTML, manifest)
+    ),
     error: output.error && {
       name: output.error.name,
       message: output.error.message,
+      lineNumber: output.lineNumber,
     },
   };
 });
@@ -86,10 +114,12 @@ export const stop = () => {
   fastify.close();
 };
 
-export const start = async () => {
+export const start = async (setupFunction) => {
   try {
     isListening = true;
+    resetFunction = setupFunction;
     await getCssFiles();
+    await setupFunction();
     await fastify.listen(3001);
     console.log("opening");
     while (isListening) {

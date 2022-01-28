@@ -1,20 +1,22 @@
 .container {
   display: flex;
   flex-direction: row;
+  height: 100vh;
+  overflow: clip;
 }
 
 .console {
   height: 100px;
 }
 
-.app {
+.test-iframe {
   border: 1px solid black;
   flex: 1;
   height: 100vh;
   overflow-y: scroll;
+  width: 100%;
 }
 
-.react-test-highlight-element {
-  border: 1px solid red;
-  flex: 1;
+.code-editor {
+  width: 400px;
 }

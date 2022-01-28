@@ -1,136 +1,59 @@
-import { useMemo, useEffect, useState, useCallback } from "react";
+import { useMemo, useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 
-import AceEditor from "react-ace";
+import Editor, { useEditor } from "./Editor";
 
-import "ace-builds/src-noconflict/mode-javascript";
-// import "ace-builds/src-noconflict/snippets/javascript";
-import "ace-builds/src-noconflict/theme-tomorrow";
-
-import langTools from "ace-builds/src-min-noconflict/ext-language_tools";
-var customCompleter = {
-  getCompletions: function (editor, session, pos, prefix, callback) {
-    callback(null, [
-      {
-        name: "screen",
-        value: "screen",
-        score: 1,
-        meta: "The screen object in react testing library",
-      },
-      {
-        name: "getByText",
-        value: "getByText",
-        score: 1,
-        meta: "The getByText object in react testing library",
-      },
-    ]);
-  },
-};
-langTools.addCompleter(customCompleter);
-
-function CommandInput({ setInnerHTML }) {
-  const [command, setCommand] = useState("");
+function CommandInput({ setInnerHTML, availableCommands }) {
+  // const readOnlyEditorProps = useEditor();
+  // const editorProps = useEditor();
+  // const { codeMirrorRef, codeHistory, appendToHistory, setText } = editorProps;
   const [commandHistory, setCommandHistory] = useState([]);
-  const [navigatingHistory, setNavigatingHistory] = useState(0);
-  const [editor, setEditor] = useState();
+  const [editorValue, setEditorValue] = useState("");
 
-  const onChange = (value) => {
-    console.log(command, value);
-    setCommand(value);
-  };
   const submit = useCallback(() => {
-    axios.post("/command", { command }).then((response) => {
+    axios.post("/command", { command: editorValue }).then((response) => {
       setInnerHTML(response.data.html);
       setCommandHistory([
         ...commandHistory,
-        { command, error: response.data.error },
+        {
+          command: editorValue,
+          error: response.data.error,
+        },
       ]);
+      setEditorValue("");
     });
-  }, [command]);
-
-  const commandHistoryText = useMemo(
-    () => commandHistory.map((history) => history.command).join("\n"),
-    [commandHistory]
-  );
-  const annotations = useMemo(
+  }, [commandHistory, setCommandHistory, setInnerHTML, editorValue]);
+  const errors = useMemo(
     () =>
       commandHistory.reduce(
         (acc, history) => {
+          acc.line += 1;
           if (history.error) {
-            acc.annotations.push({
-              row: acc.lineStart,
-              column: 0,
-              type: "error",
-              text: history.error.message.replace(
-                /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
-                ""
-              ),
-            });
+            acc.errors.push({ message: history.error, line: acc.line });
           }
-
-          acc.lineStart =
-            acc.lineStart + (history.command.match(/\n/g) || []).length + 1;
           return acc;
         },
-        { annotations: [], lineStart: 0 }
-      ).annotations,
+        { line: 0, errors: [] }
+      ).errors,
     [commandHistory]
   );
 
-  useEffect(() => {
-    if (editor) {
-      editor.getSession().setAnnotations(annotations);
-    }
-  }, [annotations]);
-
-  console.log(annotations, commandHistoryText);
-
   return (
     <>
-      <h2>Command History</h2>
-      <AceEditor
-        readOnly
-        mode="javascript"
-        theme="tomorrow"
-        name="command line editor"
-        fontSize={16}
-        showPrintMargin={true}
-        showGutter={true}
-        value={commandHistoryText}
-        onLoad={setEditor}
-        setOptions={{
-          tabSize: 2,
-        }}
+      <Editor
+        content={commandHistory.map((history) => history.command).join("\n")}
+        availableCommands={availableCommands}
+        errors={errors}
+        readonly
       />
-      <h2>Command</h2>
-      <div
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && !event.shiftKey) {
-            submit();
-            event.preventDefault();
-            setCommand("");
-          }
-        }}
-      >
-        <AceEditor
-          placeholder="Placeholder Text"
-          mode="javascript"
-          theme="tomorrow"
-          name="command line editor"
-          maxLines={3}
-          onChange={onChange}
-          fontSize={16}
-          showPrintMargin={true}
-          showGutter={true}
-          highlightActiveLine={true}
-          value={command}
-          setOptions={{
-            tabSize: 2,
-          }}
-          enableBasicAutocompletion={true}
-          enableLiveAutocompletion={true}
-        />
-      </div>
+      <Editor
+        content={editorValue}
+        onContentChange={setEditorValue}
+        availableCommands={availableCommands}
+        submit={submit}
+        commandHistory={commandHistory.map((history) => history.command)}
+      />
+      <button onClick={submit}>Submit</button>
     </>
   );
 }

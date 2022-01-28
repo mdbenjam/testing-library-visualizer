@@ -23,12 +23,28 @@ function CommandInput({ setInnerHTML, availableCommands }) {
       setEditorValue("");
     });
   }, [commandHistory, setCommandHistory, setInnerHTML, editorValue]);
+  const errors = useMemo(
+    () =>
+      commandHistory.reduce(
+        (acc, history) => {
+          acc.line += 1;
+          if (history.error) {
+            acc.errors.push({ message: history.error, line: acc.line });
+          }
+          return acc;
+        },
+        { line: 0, errors: [] }
+      ).errors,
+    [commandHistory]
+  );
 
   return (
     <>
       <Editor
         content={commandHistory.map((history) => history.command).join("\n")}
         availableCommands={availableCommands}
+        errors={errors}
+        readonly
       />
       <Editor
         content={editorValue}

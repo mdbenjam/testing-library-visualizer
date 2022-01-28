@@ -7,12 +7,18 @@ import {
   highlightActiveLine,
   dropCursor,
 } from "@codemirror/view";
+import { RangeSet, Range } from "@codemirror/rangeset";
 import { EditorState, StateField, StateEffect } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import { EditorView, Decoration } from "@codemirror/view";
 import { history, historyKeymap } from "@codemirror/history";
 import { foldGutter, foldKeymap } from "@codemirror/fold";
 import { indentOnInput } from "@codemirror/language";
-import { lineNumbers, highlightActiveLineGutter } from "@codemirror/gutter";
+import {
+  lineNumbers,
+  highlightActiveLineGutter,
+  gutter,
+  GutterMarker,
+} from "@codemirror/gutter";
 import { defaultKeymap } from "@codemirror/commands";
 import { bracketMatching } from "@codemirror/matchbrackets";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/closebrackets";
@@ -22,6 +28,7 @@ import { commentKeymap } from "@codemirror/comment";
 import { rectangularSelection } from "@codemirror/rectangular-selection";
 import { defaultHighlightStyle } from "@codemirror/highlight";
 import { lintKeymap } from "@codemirror/lint";
+import { Tooltip, hoverTooltip } from "@codemirror/tooltip";
 
 import { javascript } from "@codemirror/lang-javascript";
 import { syntaxTree } from "@codemirror/language";
@@ -89,7 +96,6 @@ const commandHistoryState = StateField.define({
     return { index: 0, commandHistory: [] };
   },
   update(value, transaction) {
-    console.log(value, transaction);
     for (const effect of transaction.effects) {
       if (effect.is(updateCommandHistoryEffect)) {
         return { ...value, commandHistory: effect.value.commandHistory };
@@ -102,12 +108,116 @@ const commandHistoryState = StateField.define({
   },
 });
 
+class ErrorGutterMarker extends GutterMarker {
+  constructor(errorData) {
+    super();
+    this.errorData = errorData;
+  }
+
+  toDOM() {
+    return document.createTextNode("🛑");
+  }
+}
+const underlineMark = Decoration.mark({ class: "cm-underline" });
+
+const errorEffect = StateEffect.define({});
+const errorState = StateField.define({
+  create() {
+    return RangeSet.empty;
+  },
+  update(value, transaction) {
+    // value = value.map(transaction.changes);
+    const errorEffects = transaction.effects.filter((error) =>
+      error.is(errorEffect)
+    );
+    value = value.update({
+      add: errorEffects.map((error) =>
+        new ErrorGutterMarker(error.value).range(
+          error.value.from,
+          error.value.to
+        )
+      ),
+      sort: true,
+    });
+
+    return value;
+  },
+  provide: (field) => {
+    return EditorView.decorations.from(field, (value) => {
+      console.log(value);
+      let marks = Decoration.none;
+      for (let iter = value.iter(); iter.value !== null; iter.next()) {
+        console.log(iter.from, iter.to);
+        marks = marks.update({
+          add: [underlineMark.range(iter.from, iter.to)],
+        });
+      }
+      console.log(marks);
+      return marks;
+    });
+  },
+});
+
+const cursorTooltipBaseTheme = EditorView.baseTheme({
+  ".cm-tooltip-error": {
+    backgroundColor: "#4f4e4a",
+    color: "white",
+    border: "none",
+    padding: "2px 7px",
+  },
+});
+
+const errorHover = hoverTooltip((view, pos, side) => {
+  const state = view.state.field(errorState);
+  let { from, to } = view.state.doc.lineAt(pos);
+
+  for (let iter = state.iter(); iter.value !== null; iter.next()) {
+    if (from === iter.from) {
+      return {
+        pos: from,
+        end: to,
+        above: true,
+        create(view) {
+          let dom = document.createElement("div");
+          dom.className = "cm-tooltip-error";
+          dom.innerHTML = `<p>${iter.value.errorData.error.message}</p>`;
+          return { dom };
+        },
+      };
+    }
+  }
+
+  return null;
+});
+
+const errorGutter = [
+  errorState,
+  gutter({
+    class: "cm-breakpoint-gutter",
+    markers: (v) => v.state.field(errorState),
+    initialSpacer: () => new ErrorGutterMarker(),
+  }),
+  EditorView.baseTheme({
+    ".cm-breakpoint-gutter .cm-gutterElement": {
+      color: "red",
+      paddingLeft: "5px",
+      cursor: "default",
+    },
+  }),
+];
+
+const underlineTheme = EditorView.baseTheme({
+  ".cm-underline": { textDecoration: "underline 1px red wavy" },
+});
+
 export default function Editor({
   onContentChange,
   availableCommands,
   submit,
   content,
   commandHistory,
+  errors,
+  readonly = false,
 }) {
   const codeEditorRef = useRef();
   const { codeMirrorRef, codeHistory } = useEditor();
@@ -125,6 +235,52 @@ export default function Editor({
       effects: updateCommandHistoryEffect.of({ commandHistory }),
     });
   }, [commandHistory, codeMirrorRef]);
+
+  useEffect(() => {
+    if (!codeMirrorRef.current) return;
+
+    const doc = codeMirrorRef.current.state.doc;
+
+    // Don't update the document if it's equal to the `content` prop.
+    // Otherwise it would reset the cursor position.
+    const currentDocument = doc.toString();
+    if (content === currentDocument) return;
+
+    codeMirrorRef.current.dispatch({
+      changes: { from: 0, to: doc.length, insert: content },
+    });
+  }, [content, codeMirrorRef]);
+
+  useEffect(() => {
+    if (!codeMirrorRef.current) return;
+    const existingErrorState = codeMirrorRef.current.state.field(errorState);
+
+    const existingErrors = [];
+    for (
+      let iter = existingErrorState.iter();
+      iter.value !== null;
+      iter.next()
+    ) {
+      existingErrors.push(iter.value);
+    }
+
+    codeMirrorRef.current.dispatch({
+      effects: errors
+        .map((error) =>
+          errorEffect.of({
+            from: codeMirrorRef.current.state.doc.line(error.line).from,
+            to: codeMirrorRef.current.state.doc.line(error.line).to,
+            error: error.message,
+          })
+        )
+        .filter((error) => {
+          console.log(existingErrors, error);
+          return !existingErrors.find(
+            (existingError) => existingError.errorData.from === error.value.from
+          );
+        }),
+    });
+  }, [errors, codeMirrorRef]);
 
   const myCompletions = useCallback(
     (context) => {
@@ -166,21 +322,6 @@ export default function Editor({
     [availableCommands]
   );
 
-  useEffect(() => {
-    if (!codeMirrorRef.current) return;
-
-    const doc = codeMirrorRef.current.state.doc;
-
-    // Don't update the document if it's equal to the `content` prop.
-    // Otherwise it would reset the cursor position.
-    const currentDocument = doc.toString();
-    if (content === currentDocument) return;
-
-    codeMirrorRef.current.dispatch({
-      changes: { from: 0, to: doc.length, insert: content },
-    });
-  }, [content, codeMirrorRef]);
-
   const updateListener = useMemo(() => {
     return EditorView.updateListener.of((update) => {
       if (
@@ -189,7 +330,6 @@ export default function Editor({
         typeof onContentChange !== "function"
       )
         return;
-      console.log(update);
       onContentChange(update.state.doc.toString());
     });
   }, [onContentChange]);
@@ -204,7 +344,6 @@ export default function Editor({
           commandHistory.index + 1,
           commandHistory.commandHistory.length
         );
-        console.log(commandHistory.commandHistory[newIndex - 1], newIndex);
         dispatch({
           effects: updateHistoryIndexEffect.of({ index: newIndex }),
           changes: {
@@ -260,7 +399,7 @@ export default function Editor({
       let state = EditorState.create({
         doc: "",
         extensions: [
-          lineNumbers(),
+          [errorGutter, lineNumbers()],
           highlightActiveLineGutter(),
           highlightSpecialChars(),
           history(),
@@ -296,9 +435,16 @@ export default function Editor({
           updateListener,
           submitFunctionState,
           commandHistoryState,
+          errorHover,
+          cursorTooltipBaseTheme,
+          underlineTheme,
+          EditorView.editable.of(!readonly),
         ],
       });
-      if (codeMirrorRef.current) {
+      if (
+        codeMirrorRef.current &&
+        typeof codeMirrorRef.current.destroy === "function"
+      ) {
         codeMirrorRef.current.destroy();
       }
       codeMirrorRef.current = new EditorView({
@@ -317,7 +463,11 @@ export default function Editor({
 
   useEffect(() => {
     return () => {
-      if (codeMirrorRef.current) codeMirrorRef.current.destory();
+      if (
+        codeMirrorRef.current &&
+        typeof codeMirrorRef.current.destroy === "function"
+      )
+        codeMirrorRef.current.destory();
     };
   }, []);
   return (

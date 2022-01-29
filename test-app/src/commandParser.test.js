@@ -1,6 +1,7 @@
 import { render } from "@testing-library/react";
-
+import { consoleLogQueue } from "./testingUtil";
 import { runCommand, availableCommands } from "./commandParser";
+import { useState } from "react";
 
 test("parses simple command", async () => {
   render(<>Hello World</>);
@@ -65,4 +66,30 @@ test("availableCommands yields all commands", async () => {
   expect(availableCommands().screen).toEqual(
     expect.arrayContaining(["getByText"])
   );
+});
+
+function TestComponent() {
+  const [text, setText] = useState("Hello World");
+
+  return (
+    <>
+      {text}
+      <button onClick={() => setTimeout(() => setText("Goodbye"), 5)}>
+        click me
+      </button>
+    </>
+  );
+}
+
+test("reports warnings", async () => {
+  render(<TestComponent />);
+
+  expect(
+    (
+      await runCommand(
+        "userEvent.click(screen.getByText('click me'))",
+        consoleLogQueue
+      )
+    ).error.message
+  ).toEqual(expect.stringMatching(/not wrapped in act/g));
 });

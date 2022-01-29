@@ -87,7 +87,7 @@ async function traverseTree(node) {
   }
 }
 
-export async function runCommand(string) {
+export async function runCommand(string, consoleLogQueue = []) {
   const parseTree = acorn.parse(string, {
     ecmaVersion: 2020,
     allowAwaitOutsideFunction: true,
@@ -103,6 +103,21 @@ export async function runCommand(string) {
     for (const statement of parseTree.body) {
       await traverseTree(statement);
       lineNumber += 1;
+    }
+
+    function delay(time) {
+      return new Promise((resolve) => setTimeout(resolve, time));
+    }
+
+    await delay(10);
+
+    for (const consoleLog of consoleLogQueue) {
+      if (consoleLog.method === "error") {
+        consoleLog.seen = true;
+        throw Error(
+          `Error printed to console.error. This error occured asynchronously, and may have happened before this line was executed.\n\n${consoleLog.arguments[0]}`
+        );
+      }
     }
 
     return { ok: true, error: null, lineNumber: null };

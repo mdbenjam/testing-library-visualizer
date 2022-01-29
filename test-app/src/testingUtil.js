@@ -5,6 +5,31 @@ import fs from "fs";
 import { runCommand, availableCommands } from "./commandParser";
 import { cleanup } from "@testing-library/react";
 
+export const consoleLogQueue = [];
+
+export const debuggerSetup = () => {
+  jest.setTimeout(3600000);
+
+  var _log = console.log,
+    _warn = console.warn,
+    _error = console.error;
+
+  console.log = function () {
+    consoleLogQueue.push({ method: "log", arguments: arguments });
+    return _log.apply(console, arguments);
+  };
+
+  console.warn = function () {
+    consoleLogQueue.push({ method: "warn", arguments: arguments });
+    return _warn.apply(console, arguments);
+  };
+
+  console.error = function () {
+    consoleLogQueue.push({ method: "error", arguments: arguments });
+    return _error.apply(console, arguments);
+  };
+};
+
 const fastify = Fastify({
   logger: true,
 });
@@ -91,7 +116,7 @@ fastify.post("/reset", async (request, reply) => {
 });
 
 fastify.post("/command", async (request, reply) => {
-  const output = await runCommand(request.body.command);
+  const output = await runCommand(request.body.command, consoleLogQueue);
 
   return {
     html: addStyleLinks(

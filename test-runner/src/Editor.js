@@ -127,16 +127,17 @@ const errorState = StateField.define({
   },
   update(value, transaction) {
     // value = value.map(transaction.changes);
+
     const errorEffects = transaction.effects.filter((error) =>
       error.is(errorEffect)
     );
     value = value.update({
-      add: errorEffects.map((error) =>
-        new ErrorGutterMarker(error.value).range(
+      add: errorEffects.map((error) => {
+        return new ErrorGutterMarker(error.value).range(
           error.value.from,
           error.value.to
-        )
-      ),
+        );
+      }),
       sort: true,
     });
 
@@ -144,15 +145,13 @@ const errorState = StateField.define({
   },
   provide: (field) => {
     return EditorView.decorations.from(field, (value) => {
-      console.log(value);
       let marks = Decoration.none;
       for (let iter = value.iter(); iter.value !== null; iter.next()) {
-        console.log(iter.from, iter.to);
         marks = marks.update({
           add: [underlineMark.range(iter.from, iter.to)],
         });
       }
-      console.log(marks);
+
       return marks;
     });
   },
@@ -218,7 +217,8 @@ const setCodeHistory = (codeMirrorRef, commandHistory) => {
 };
 
 const setText = (codeMirrorRef, content) => {
-  if (!codeMirrorRef.current) return;
+  if (!codeMirrorRef.current || content === null || content === undefined)
+    return;
 
   const doc = codeMirrorRef.current.state.doc;
 
@@ -230,6 +230,10 @@ const setText = (codeMirrorRef, content) => {
   codeMirrorRef.current.dispatch({
     changes: { from: 0, to: doc.length, insert: content },
   });
+
+  const scrollEffect = EditorView.scrollIntoView(content.length, { y: "end" });
+
+  codeMirrorRef.current.dispatch({ effects: scrollEffect });
 };
 
 const setErrors = (codeMirrorRef, errors) => {
@@ -243,15 +247,14 @@ const setErrors = (codeMirrorRef, errors) => {
 
   codeMirrorRef.current.dispatch({
     effects: errors
-      .map((error) =>
-        errorEffect.of({
+      .map((error) => {
+        return errorEffect.of({
           from: codeMirrorRef.current.state.doc.line(error.line).from,
           to: codeMirrorRef.current.state.doc.line(error.line).to,
           error: error.message,
-        })
-      )
+        });
+      })
       .filter((error) => {
-        console.log(existingErrors, error);
         return !existingErrors.find(
           (existingError) => existingError.errorData.from === error.value.from
         );
@@ -263,9 +266,9 @@ export default function Editor({
   onContentChange,
   availableCommands,
   submit,
-  content,
+  content = "",
   commandHistory,
-  errors,
+  errors = [],
   readonly = false,
 }) {
   const codeEditorRef = useRef();
@@ -303,7 +306,7 @@ export default function Editor({
             ? nodeBefore.to
             : nodeBefore.from;
           let variableName = context.state.sliceDoc(object.from, object.to);
-          console.log(variableName, from);
+
           return {
             from,
             options: (availableCommands[variableName] || []).map(
@@ -367,7 +370,7 @@ export default function Editor({
         const commandHistory = state.field(commandHistoryState);
 
         const newIndex = Math.max(commandHistory.index - 1, 0);
-        console.log(commandHistory, newIndex);
+
         dispatch({
           effects: updateHistoryIndexEffect.of({ index: newIndex }),
           changes: {

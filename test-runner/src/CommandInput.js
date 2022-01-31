@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 
-import Editor, { useEditor } from "./Editor";
+import Editor from "./Editor";
 
 const HISTORY_KEY = "HISTORY";
 const TEST_HISTORY_KEY = "TEST_HISTORY";
@@ -13,15 +13,20 @@ function CommandInput({ setInnerHTML, availableCommands }) {
       : []
   );
   const [readOnlyEditor, setReadOnlyEditor] = useState(() => {
-    return window.localStorage.getItem(TEST_HISTORY_KEY)
+    const existingHistory = window.localStorage.getItem(TEST_HISTORY_KEY)
       ? JSON.parse(window.localStorage.getItem(TEST_HISTORY_KEY))
-      : {
-          content: "",
-          errors: [],
-        };
+      : [];
+    return [
+      ...existingHistory,
+      {
+        content: "",
+        errors: [],
+        wasReset: false,
+      },
+    ];
   });
   const [editorValue, setEditorValue] = useState("");
-  console.log(readOnlyEditor.content, readOnlyEditor.errors);
+
   useEffect(() => {
     window.localStorage.setItem(HISTORY_KEY, JSON.stringify(commandHistory));
   }, [commandHistory]);
@@ -37,20 +42,28 @@ function CommandInput({ setInnerHTML, availableCommands }) {
     axios.post("/command", { command: editorValue }).then((response) => {
       setInnerHTML(response.data.html);
       setCommandHistory([editorValue, ...commandHistory]);
-      setReadOnlyEditor({
-        content: readOnlyEditor.content + editorValue + "\n",
-        errors: response.data.error
-          ? [
-              ...readOnlyEditor.errors,
-              {
-                line:
-                  response.data.error.lineNumber +
-                  readOnlyEditor.content.split("\n").length,
-                message: response.data.error,
-              },
-            ]
-          : [...readOnlyEditor.errors],
-      });
+      setReadOnlyEditor(
+        readOnlyEditor.map((editor, index) => {
+          if (index === readOnlyEditor.length - 1) {
+            return {
+              content: editor.content + editorValue + "\n",
+              errors: response.data.error
+                ? [
+                    ...editor.errors,
+                    {
+                      line:
+                        response.data.error.lineNumber +
+                        editor.content.split("\n").length,
+                      message: response.data.error,
+                    },
+                  ]
+                : [...editor.errors],
+            };
+          } else {
+            return { ...editor };
+          }
+        })
+      );
       setEditorValue("");
     });
   }, [
@@ -64,22 +77,51 @@ function CommandInput({ setInnerHTML, availableCommands }) {
   const resetTest = useCallback(() => {
     axios.post("/reset").then((response) => {
       setInnerHTML(response.data.html);
-      setReadOnlyEditor(
+      setReadOnlyEditor([
+        ...readOnlyEditor,
         {
           content: "",
           errors: [],
+          wasReset: true,
         },
-        ...readOnlyEditor
-      );
+      ]);
     });
   }, [setInnerHTML, setReadOnlyEditor, readOnlyEditor]);
-  console.log(readOnlyEditor.errors);
+
+  const existingContent = useMemo(() => {
+    return readOnlyEditor.reduce(
+      (acc, editor, index) => {
+        const currentLine = acc.content.split("\n").length - 1;
+
+        if (index < readOnlyEditor.length - 1) {
+          acc.content =
+            acc.content +
+            `${editor.content}\n// <------ ${
+              editor.wasReset ? "Browser Refreshed" : "Test Reset"
+            } ------>\n`;
+        } else {
+          acc.content += editor.content;
+        }
+        acc.errors = [
+          ...acc.errors,
+          ...editor.errors.map((error) => ({
+            ...error,
+            line: error.line + currentLine,
+          })),
+        ];
+
+        return acc;
+      },
+      { errors: [], content: "" }
+    );
+  }, [readOnlyEditor]);
+
   return (
     <>
       <Editor
-        content={readOnlyEditor.content}
+        content={existingContent.content}
         availableCommands={availableCommands}
-        errors={readOnlyEditor.errors}
+        errors={existingContent.errors}
         readonly
       />
       <Editor

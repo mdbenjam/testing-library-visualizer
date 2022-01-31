@@ -46,7 +46,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
                 line:
                   response.data.error.lineNumber +
                   readOnlyEditor.content.split("\n").length,
-                error: response.data.error,
+                message: response.data.error,
               },
             ]
           : [...readOnlyEditor.errors],
@@ -73,7 +73,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
       );
     });
   }, [setInnerHTML, setReadOnlyEditor, readOnlyEditor]);
-
+  console.log(readOnlyEditor.errors);
   return (
     <>
       <Editor

@@ -97,7 +97,6 @@ fastify.get("/load", async (request, reply) => {
       replaceFilePaths(document.documentElement.innerHTML, manifest)
     ),
     availableCommands: availableCommands(),
-    testName: expect.getState().currentTestName,
   };
 });
 

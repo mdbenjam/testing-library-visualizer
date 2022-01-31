@@ -4,35 +4,39 @@ import axios from "axios";
 import Editor, { useEditor } from "./Editor";
 
 const HISTORY_KEY = "HISTORY";
+const TEST_HISTORY_KEY = "TEST_HISTORY";
 
 function CommandInput({ setInnerHTML, availableCommands }) {
-  // const readOnlyEditorProps = useEditor();
-  // const editorProps = useEditor();
-  // const { codeMirrorRef, codeHistory, appendToHistory, setText } = editorProps;
-  const [commandHistory, setCommandHistory] = useState([]);
-  const [readOnlyEditor, setReadOnlyEditor] = useState({
-    content: "",
-    errors: [],
+  const [commandHistory, setCommandHistory] = useState(() =>
+    window.localStorage.getItem(HISTORY_KEY)
+      ? JSON.parse(window.localStorage.getItem(HISTORY_KEY))
+      : []
+  );
+  const [readOnlyEditor, setReadOnlyEditor] = useState(() => {
+    return window.localStorage.getItem(TEST_HISTORY_KEY)
+      ? JSON.parse(window.localStorage.getItem(TEST_HISTORY_KEY))
+      : {
+          content: "",
+          errors: [],
+        };
   });
   const [editorValue, setEditorValue] = useState("");
+  console.log(readOnlyEditor.content, readOnlyEditor.errors);
+  useEffect(() => {
+    window.localStorage.setItem(HISTORY_KEY, JSON.stringify(commandHistory));
+  }, [commandHistory]);
 
-  // useEffect(() => {
-  //   const existingHistory = window.localStorage.setItem(
-  //     HISTORY_KEY,
-  //     commandHistory
-  //   );
-  // }, [commandHistory]);
+  useEffect(() => {
+    window.localStorage.setItem(
+      TEST_HISTORY_KEY,
+      JSON.stringify(readOnlyEditor)
+    );
+  }, [readOnlyEditor]);
 
   const submit = useCallback(() => {
     axios.post("/command", { command: editorValue }).then((response) => {
       setInnerHTML(response.data.html);
-      setCommandHistory([
-        ...commandHistory,
-        {
-          command: editorValue,
-          error: response.data.error,
-        },
-      ]);
+      setCommandHistory([editorValue, ...commandHistory]);
       setReadOnlyEditor({
         content: readOnlyEditor.content + editorValue + "\n",
         errors: response.data.error
@@ -40,7 +44,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
               ...readOnlyEditor.errors,
               {
                 line:
-                  response.data.lineNumber +
+                  response.data.error.lineNumber +
                   readOnlyEditor.content.split("\n").length,
                 error: response.data.error,
               },
@@ -56,21 +60,20 @@ function CommandInput({ setInnerHTML, availableCommands }) {
     editorValue,
     readOnlyEditor,
   ]);
-  // const errors = useMemo(
-  //   () =>
-  //     commandHistory.reduce(
-  //       (acc, history) => {
-  //         acc.line += 1;
-  //         if (history.error) {
-  //           acc.errors.push({ message: history.error, line: acc.line });
-  //         }
-  //         return acc;
-  //       },
-  //       { line: 0, errors: [] }
-  //     ).errors,
-  //   [commandHistory]
-  // );
-  console.log(readOnlyEditor);
+
+  const resetTest = useCallback(() => {
+    axios.post("/reset").then((response) => {
+      setInnerHTML(response.data.html);
+      setReadOnlyEditor(
+        {
+          content: "",
+          errors: [],
+        },
+        ...readOnlyEditor
+      );
+    });
+  }, [setInnerHTML, setReadOnlyEditor, readOnlyEditor]);
+
   return (
     <>
       <Editor
@@ -87,6 +90,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
         commandHistory={commandHistory}
       />
       <button onClick={submit}>Submit</button>
+      <button onClick={resetTest}>Reset Test</button>
     </>
   );
 }

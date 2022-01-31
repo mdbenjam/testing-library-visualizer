@@ -40,15 +40,6 @@ function App() {
           setInnerHTML={setInnerHTML}
         />
         <button onClick={() => axios.post("/stop")}>Stop Test</button>
-        <button
-          onClick={() =>
-            axios.post("/reset").then((response) => {
-              setInnerHTML(response.data.html);
-            })
-          }
-        >
-          Reset Test
-        </button>
       </div>
       <IFrame className="app">{innerHTML}</IFrame>
     </div>

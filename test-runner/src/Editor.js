@@ -28,7 +28,7 @@ import { commentKeymap } from "@codemirror/comment";
 import { rectangularSelection } from "@codemirror/rectangular-selection";
 import { defaultHighlightStyle } from "@codemirror/highlight";
 import { lintKeymap } from "@codemirror/lint";
-import { Tooltip, hoverTooltip } from "@codemirror/tooltip";
+import { hoverTooltip } from "@codemirror/tooltip";
 
 import { javascript } from "@codemirror/lang-javascript";
 import { syntaxTree } from "@codemirror/language";
@@ -210,6 +210,55 @@ const underlineTheme = EditorView.baseTheme({
   ".cm-underline": { textDecoration: "underline 1px red wavy" },
 });
 
+const setCodeHistory = (codeMirrorRef, commandHistory) => {
+  if (!codeMirrorRef.current) return;
+  codeMirrorRef.current.dispatch({
+    effects: updateCommandHistoryEffect.of({ commandHistory }),
+  });
+};
+
+const setText = (codeMirrorRef, content) => {
+  if (!codeMirrorRef.current) return;
+
+  const doc = codeMirrorRef.current.state.doc;
+
+  // Don't update the document if it's equal to the `content` prop.
+  // Otherwise it would reset the cursor position.
+  const currentDocument = doc.toString();
+  if (content === currentDocument) return;
+
+  codeMirrorRef.current.dispatch({
+    changes: { from: 0, to: doc.length, insert: content },
+  });
+};
+
+const setErrors = (codeMirrorRef, errors) => {
+  if (!codeMirrorRef.current || !errors) return;
+  const existingErrorState = codeMirrorRef.current.state.field(errorState);
+
+  const existingErrors = [];
+  for (let iter = existingErrorState.iter(); iter.value !== null; iter.next()) {
+    existingErrors.push(iter.value);
+  }
+
+  codeMirrorRef.current.dispatch({
+    effects: errors
+      .map((error) =>
+        errorEffect.of({
+          from: codeMirrorRef.current.state.doc.line(error.line).from,
+          to: codeMirrorRef.current.state.doc.line(error.line).to,
+          error: error.message,
+        })
+      )
+      .filter((error) => {
+        console.log(existingErrors, error);
+        return !existingErrors.find(
+          (existingError) => existingError.errorData.from === error.value.from
+        );
+      }),
+  });
+};
+
 export default function Editor({
   onContentChange,
   availableCommands,
@@ -230,56 +279,15 @@ export default function Editor({
   }, [submit, codeMirrorRef]);
 
   useEffect(() => {
-    if (!codeMirrorRef.current) return;
-    codeMirrorRef.current.dispatch({
-      effects: updateCommandHistoryEffect.of({ commandHistory }),
-    });
+    setCodeHistory(codeMirrorRef, commandHistory);
   }, [commandHistory, codeMirrorRef]);
 
   useEffect(() => {
-    if (!codeMirrorRef.current) return;
-
-    const doc = codeMirrorRef.current.state.doc;
-
-    // Don't update the document if it's equal to the `content` prop.
-    // Otherwise it would reset the cursor position.
-    const currentDocument = doc.toString();
-    if (content === currentDocument) return;
-
-    codeMirrorRef.current.dispatch({
-      changes: { from: 0, to: doc.length, insert: content },
-    });
+    setText(codeMirrorRef, content);
   }, [content, codeMirrorRef]);
 
   useEffect(() => {
-    if (!codeMirrorRef.current) return;
-    const existingErrorState = codeMirrorRef.current.state.field(errorState);
-
-    const existingErrors = [];
-    for (
-      let iter = existingErrorState.iter();
-      iter.value !== null;
-      iter.next()
-    ) {
-      existingErrors.push(iter.value);
-    }
-
-    codeMirrorRef.current.dispatch({
-      effects: errors
-        .map((error) =>
-          errorEffect.of({
-            from: codeMirrorRef.current.state.doc.line(error.line).from,
-            to: codeMirrorRef.current.state.doc.line(error.line).to,
-            error: error.message,
-          })
-        )
-        .filter((error) => {
-          console.log(existingErrors, error);
-          return !existingErrors.find(
-            (existingError) => existingError.errorData.from === error.value.from
-          );
-        }),
-    });
+    setErrors(codeMirrorRef, errors);
   }, [errors, codeMirrorRef]);
 
   const myCompletions = useCallback(
@@ -452,6 +460,9 @@ export default function Editor({
         parent: codeEditorRef.current,
       });
       codeMirrorRef.current.focus();
+      setCodeHistory(codeMirrorRef, commandHistory);
+      setText(codeMirrorRef, content);
+      setErrors(codeMirrorRef, errors);
     }
   }, [
     codeEditorRef,
@@ -459,6 +470,7 @@ export default function Editor({
     myCompletions,
     codeHistory,
     updateListener,
+    readonly,
   ]);
 
   useEffect(() => {

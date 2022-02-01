@@ -5,11 +5,32 @@ import fs from "fs";
 import { runCommand, availableCommands } from "./commandParser";
 import { cleanup } from "@testing-library/react";
 
+export const debugTest = async (name, fn) => {
+  await test(
+    name,
+    async () => {
+      try {
+        await debuggerSetup(async () => {
+          await start(fn);
+        });
+      } catch (error) {
+        throw error;
+      } finally {
+        stop();
+      }
+    },
+    3600000
+  );
+};
+
 export const consoleLogQueue = [];
+const registeredStyling = [];
 
-export const debuggerSetup = () => {
-  jest.setTimeout(3600000);
+export const registerStyling = (styling) => {
+  registeredStyling.push(styling);
+};
 
+export const debuggerSetup = async (fn) => {
   var _log = console.log,
     _warn = console.warn,
     _error = console.error;
@@ -28,6 +49,12 @@ export const debuggerSetup = () => {
     consoleLogQueue.push({ method: "error", arguments: arguments });
     return _error.apply(console, arguments);
   };
+
+  await fn();
+
+  console.log = _log;
+  console.warn = _warn;
+  console.error = _error;
 };
 
 const fastify = Fastify({
@@ -76,7 +103,7 @@ export function replaceFilePaths(html, manifest) {
 }
 
 function addStyleLinks(html) {
-  const cssFiles = [manifest["main.css"]];
+  const cssFiles = [manifest["main.css"], ...registeredStyling];
   const parser = new DOMParser();
   const newDoc = parser.parseFromString(html, "text/html");
 
@@ -143,6 +170,7 @@ export const start = async (setupFunction) => {
   try {
     isListening = true;
     resetFunction = setupFunction;
+
     await getCssFiles();
     await setupFunction();
     await fastify.listen(3001);

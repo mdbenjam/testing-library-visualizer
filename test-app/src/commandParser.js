@@ -27,7 +27,7 @@ function refresh() {
   // This is a no op just to refresh the page
 }
 
-const IDENTIFIER_MAP = {
+let IDENTIFIER_MAP = {
   screen,
   expect,
   fireEvent,
@@ -35,6 +35,9 @@ const IDENTIFIER_MAP = {
   within,
   highlight,
   refresh,
+};
+export const registerCommands = (commands) => {
+  IDENTIFIER_MAP = { ...IDENTIFIER_MAP, ...commands };
 };
 
 export const availableCommands = () => {

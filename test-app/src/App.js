@@ -23,7 +23,7 @@ function App() {
       </header>
       <div>Counter: {counter}</div>
       <button onClick={() => setCounter(counter + 1)}>Increment counter</button>
-      <div>Delayed update: {delayedUpdate}</div>
+      <div className="test-style">Delayed update: {delayedUpdate}</div>
       <button
         onClick={() =>
           setTimeout(() => {

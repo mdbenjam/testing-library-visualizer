@@ -3,10 +3,12 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom";
-import { stop, debuggerSetup } from "./testingUtil";
+import { registerCommands } from "./commandParser";
+import { registerStyling } from "./testingUtil";
 
-debuggerSetup();
-
-afterAll(() => {
-  return stop();
+registerStyling("static/css/test.css");
+registerCommands({
+  test: () => {
+    console.log("test command");
+  },
 });

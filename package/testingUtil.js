@@ -5,6 +5,23 @@ import fs from "fs";
 import { runCommand, availableCommands } from "./commandParser";
 import { cleanup } from "@testing-library/react";
 
+const fastify = Fastify({
+  logger: true,
+});
+
+let buildDirectory = "";
+
+const ASSET_DIRECTORY = "assets";
+
+export const setup = (directory) => {
+  buildDirectory = directory;
+  fastify.register(fastifyStatic, {
+    root: buildDirectory,
+    prefix: `/${ASSET_DIRECTORY}/`, // optional: default '/'
+    wildcard: true,
+  });
+};
+
 export const debugTest = async (name, fn) => {
   await test(
     name,
@@ -57,27 +74,12 @@ export const debuggerSetup = async (fn) => {
   console.error = _error;
 };
 
-const fastify = Fastify({
-  logger: true,
-});
-
-fastify.register(fastifyStatic, {
-  root: path.join(__dirname, "..", "build"),
-  prefix: "/", // optional: default '/'
-  wildcard: true,
-});
-
 var isListening = false;
 var manifest = {};
 var resetFunction = null;
 
 async function getCssFiles() {
-  const manifestFileLocation = path.join(
-    __dirname,
-    "..",
-    "build",
-    "asset-manifest.json"
-  );
+  const manifestFileLocation = path.join(buildDirectory, "asset-manifest.json");
 
   if (fs.existsSync(manifestFileLocation)) {
     const rawdata = fs.readFileSync(manifestFileLocation);
@@ -92,11 +94,15 @@ async function getCssFiles() {
 
 export function replaceFilePaths(html, manifest) {
   const srcReplaced = html.replace(/src=\"(.*?)\"/, (_match, p1) => {
-    return `src="${manifest[p1] || manifest["static/media/" + p1] || p1}"`;
+    return `src="${ASSET_DIRECTORY}/${
+      manifest[p1] || manifest["static/media/" + p1] || p1
+    }"`;
   });
 
   const hrefReplaced = srcReplaced.replace(/href=\"(.*?)\"/, (_match, p1) => {
-    return `href="${manifest[p1] || manifest["static/media/" + p1] || p1}"`;
+    return `href="${ASSET_DIRECTORY}/${
+      manifest[p1] || manifest["static/media/" + p1] || p1
+    }"`;
   });
 
   return hrefReplaced;
@@ -111,12 +117,24 @@ function addStyleLinks(html) {
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.type = "text/css";
-    link.href = cssFile;
+    link.href = `${ASSET_DIRECTORY}/` + cssFile;
     newDoc.head.appendChild(link);
   });
 
   return newDoc.documentElement.innerHTML;
 }
+
+fastify.register(fastifyStatic, {
+  root: path.join(__dirname, "build"),
+  prefix: "/", // optional: default '/'
+  wildcard: true,
+  decorateReply: false,
+});
+
+fastify.get("/", async (request, reply) => {
+  console.log("inside", path.join(__dirname, "build", "index.html"));
+  return reply.sendFile("index.html", path.join(__dirname, "build"));
+});
 
 fastify.get("/load", async (request, reply) => {
   return {
@@ -174,7 +192,7 @@ export const start = async (setupFunction) => {
     await getCssFiles();
     await setupFunction();
     await fastify.listen(3001);
-    console.log("opening");
+    console.log("Debug server is running, open at 127.0.0.1:3001");
     while (isListening) {
       await sleep(50);
     }

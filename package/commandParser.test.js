@@ -1,5 +1,6 @@
+import React from "react";
 import { render } from "@testing-library/react";
-import { consoleLogQueue } from "./testingUtil";
+import { consoleLogQueue, debuggerSetup } from "./testingUtil";
 import { runCommand, availableCommands } from "./commandParser";
 import { useState } from "react";
 
@@ -82,14 +83,16 @@ function TestComponent() {
 }
 
 test("reports warnings", async () => {
-  render(<TestComponent />);
+  await debuggerSetup(async () => {
+    render(<TestComponent />);
 
-  expect(
-    (
-      await runCommand(
-        "userEvent.click(screen.getByText('click me'))",
-        consoleLogQueue
-      )
-    ).error.message
-  ).toEqual(expect.stringMatching(/not wrapped in act/g));
+    expect(
+      (
+        await runCommand(
+          "userEvent.click(screen.getByText('click me'))",
+          consoleLogQueue
+        )
+      ).error.message
+    ).toEqual(expect.stringMatching(/not wrapped in act/g));
+  });
 });

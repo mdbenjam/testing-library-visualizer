@@ -28,7 +28,7 @@ import { commentKeymap } from "@codemirror/comment";
 import { rectangularSelection } from "@codemirror/rectangular-selection";
 import { defaultHighlightStyle } from "@codemirror/highlight";
 import { lintKeymap } from "@codemirror/lint";
-import { Tooltip, hoverTooltip } from "@codemirror/tooltip";
+import { hoverTooltip } from "@codemirror/tooltip";
 
 import { javascript } from "@codemirror/lang-javascript";
 import { syntaxTree } from "@codemirror/language";
@@ -126,17 +126,18 @@ const errorState = StateField.define({
     return RangeSet.empty;
   },
   update(value, transaction) {
-    // value = value.map(transaction.changes);
+    value = value.map(transaction.changes);
+
     const errorEffects = transaction.effects.filter((error) =>
       error.is(errorEffect)
     );
     value = value.update({
-      add: errorEffects.map((error) =>
-        new ErrorGutterMarker(error.value).range(
+      add: errorEffects.map((error) => {
+        return new ErrorGutterMarker(error.value).range(
           error.value.from,
           error.value.to
-        )
-      ),
+        );
+      }),
       sort: true,
     });
 
@@ -144,15 +145,13 @@ const errorState = StateField.define({
   },
   provide: (field) => {
     return EditorView.decorations.from(field, (value) => {
-      console.log(value);
       let marks = Decoration.none;
       for (let iter = value.iter(); iter.value !== null; iter.next()) {
-        console.log(iter.from, iter.to);
         marks = marks.update({
           add: [underlineMark.range(iter.from, iter.to)],
         });
       }
-      console.log(marks);
+
       return marks;
     });
   },
@@ -210,13 +209,66 @@ const underlineTheme = EditorView.baseTheme({
   ".cm-underline": { textDecoration: "underline 1px red wavy" },
 });
 
+const setCodeHistory = (codeMirrorRef, commandHistory) => {
+  if (!codeMirrorRef.current) return;
+  codeMirrorRef.current.dispatch({
+    effects: updateCommandHistoryEffect.of({ commandHistory }),
+  });
+};
+
+const setText = (codeMirrorRef, content) => {
+  if (!codeMirrorRef.current || content === null || content === undefined)
+    return;
+
+  const doc = codeMirrorRef.current.state.doc;
+
+  // Don't update the document if it's equal to the `content` prop.
+  // Otherwise it would reset the cursor position.
+  const currentDocument = doc.toString();
+  if (content === currentDocument) return;
+
+  codeMirrorRef.current.dispatch({
+    changes: { from: 0, to: doc.length, insert: content },
+  });
+
+  const scrollEffect = EditorView.scrollIntoView(content.length, { y: "end" });
+
+  codeMirrorRef.current.dispatch({ effects: scrollEffect });
+};
+
+const setErrors = (codeMirrorRef, errors) => {
+  if (!codeMirrorRef.current || !errors) return;
+  const existingErrorState = codeMirrorRef.current.state.field(errorState);
+
+  const existingErrors = [];
+  for (let iter = existingErrorState.iter(); iter.value !== null; iter.next()) {
+    existingErrors.push(iter.value);
+  }
+
+  codeMirrorRef.current.dispatch({
+    effects: errors
+      .map((error) => {
+        return errorEffect.of({
+          from: codeMirrorRef.current.state.doc.line(error.line).from,
+          to: codeMirrorRef.current.state.doc.line(error.line).to,
+          error: error.message,
+        });
+      })
+      .filter((error) => {
+        return !existingErrors.find(
+          (existingError) => existingError.errorData.from === error.value.from
+        );
+      }),
+  });
+};
+
 export default function Editor({
   onContentChange,
   availableCommands,
   submit,
-  content,
+  content = "",
   commandHistory,
-  errors,
+  errors = [],
   readonly = false,
 }) {
   const codeEditorRef = useRef();
@@ -230,56 +282,15 @@ export default function Editor({
   }, [submit, codeMirrorRef]);
 
   useEffect(() => {
-    if (!codeMirrorRef.current) return;
-    codeMirrorRef.current.dispatch({
-      effects: updateCommandHistoryEffect.of({ commandHistory }),
-    });
+    setCodeHistory(codeMirrorRef, commandHistory);
   }, [commandHistory, codeMirrorRef]);
 
   useEffect(() => {
-    if (!codeMirrorRef.current) return;
-
-    const doc = codeMirrorRef.current.state.doc;
-
-    // Don't update the document if it's equal to the `content` prop.
-    // Otherwise it would reset the cursor position.
-    const currentDocument = doc.toString();
-    if (content === currentDocument) return;
-
-    codeMirrorRef.current.dispatch({
-      changes: { from: 0, to: doc.length, insert: content },
-    });
+    setText(codeMirrorRef, content);
   }, [content, codeMirrorRef]);
 
   useEffect(() => {
-    if (!codeMirrorRef.current) return;
-    const existingErrorState = codeMirrorRef.current.state.field(errorState);
-
-    const existingErrors = [];
-    for (
-      let iter = existingErrorState.iter();
-      iter.value !== null;
-      iter.next()
-    ) {
-      existingErrors.push(iter.value);
-    }
-
-    codeMirrorRef.current.dispatch({
-      effects: errors
-        .map((error) =>
-          errorEffect.of({
-            from: codeMirrorRef.current.state.doc.line(error.line).from,
-            to: codeMirrorRef.current.state.doc.line(error.line).to,
-            error: error.message,
-          })
-        )
-        .filter((error) => {
-          console.log(existingErrors, error);
-          return !existingErrors.find(
-            (existingError) => existingError.errorData.from === error.value.from
-          );
-        }),
-    });
+    setErrors(codeMirrorRef, errors);
   }, [errors, codeMirrorRef]);
 
   const myCompletions = useCallback(
@@ -295,7 +306,7 @@ export default function Editor({
             ? nodeBefore.to
             : nodeBefore.from;
           let variableName = context.state.sliceDoc(object.from, object.to);
-          console.log(variableName, from);
+
           return {
             from,
             options: (availableCommands[variableName] || []).map(
@@ -359,7 +370,7 @@ export default function Editor({
         const commandHistory = state.field(commandHistoryState);
 
         const newIndex = Math.max(commandHistory.index - 1, 0);
-        console.log(commandHistory, newIndex);
+
         dispatch({
           effects: updateHistoryIndexEffect.of({ index: newIndex }),
           changes: {
@@ -452,6 +463,9 @@ export default function Editor({
         parent: codeEditorRef.current,
       });
       codeMirrorRef.current.focus();
+      setCodeHistory(codeMirrorRef, commandHistory);
+      setText(codeMirrorRef, content);
+      setErrors(codeMirrorRef, errors);
     }
   }, [
     codeEditorRef,
@@ -459,6 +473,7 @@ export default function Editor({
     myCompletions,
     codeHistory,
     updateListener,
+    readonly,
   ]);
 
   useEffect(() => {

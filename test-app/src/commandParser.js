@@ -104,6 +104,7 @@ export async function runCommand(string, consoleLogQueue = []) {
       await traverseTree(statement);
       lineNumber += 1;
     }
+    lineNumber -= 1;
 
     function delay(time) {
       return new Promise((resolve) => setTimeout(resolve, time));
@@ -112,7 +113,7 @@ export async function runCommand(string, consoleLogQueue = []) {
     await delay(10);
 
     for (const consoleLog of consoleLogQueue) {
-      if (consoleLog.method === "error") {
+      if (consoleLog.method === "error" && !consoleLog.seen) {
         consoleLog.seen = true;
         throw Error(
           `Error printed to console.error. This error occured asynchronously, and may have happened before this line was executed.\n\n${consoleLog.arguments[0]}`

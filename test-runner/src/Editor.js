@@ -40,7 +40,7 @@ import {
 const completePropertyAfter = ["PropertyName", ".", "?."];
 
 const fixedHeightEditor = EditorView.theme({
-  "&": { height: "300px" },
+  "&": { height: "calc(50vh - 100px)" },
   ".cm-scroller": { overflow: "auto" },
 });
 

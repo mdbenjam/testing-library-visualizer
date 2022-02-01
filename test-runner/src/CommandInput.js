@@ -121,36 +121,45 @@ function CommandInput({ setInnerHTML, availableCommands }) {
   return (
     <>
       <ErrorBoundary>
-        <Editor
-          content={existingContent.content}
-          availableCommands={availableCommands}
-          errors={existingContent.errors}
-          readonly
-        />
-        <Editor
-          content={editorValue}
-          onContentChange={setEditorValue}
-          availableCommands={availableCommands}
-          submit={submit}
-          commandHistory={commandHistory}
-        />
+        <div className="editor-div">
+          <h1 className="code-window-titles">Code History</h1>
+          <Editor
+            content={existingContent.content}
+            availableCommands={availableCommands}
+            errors={existingContent.errors}
+            readonly
+          />
+        </div>
+        <div className="editor-div">
+          <h1 className="code-window-titles">Code Input</h1>
+          <Editor
+            content={editorValue}
+            onContentChange={setEditorValue}
+            availableCommands={availableCommands}
+            submit={submit}
+            commandHistory={commandHistory}
+          />
+        </div>
       </ErrorBoundary>
-      <button onClick={submit}>Submit</button>
-      <button onClick={resetTest}>Reset Test</button>
-      <button
-        onClick={() => {
-          window.localStorage.clear();
-          setReadOnlyEditor([
-            {
-              content: "",
-              errors: [],
-              wasReset: false,
-            },
-          ]);
-        }}
-      >
-        Clear history
-      </button>
+      <div>
+        <button onClick={submit}>Submit</button>
+        <button onClick={resetTest}>Reset Test</button>
+        <button
+          onClick={() => {
+            window.localStorage.clear();
+            setReadOnlyEditor([
+              {
+                content: "",
+                errors: [],
+                wasReset: false,
+              },
+            ]);
+          }}
+        >
+          Clear history
+        </button>
+        <button onClick={() => axios.post("/stop")}>Stop Test</button>
+      </div>
     </>
   );
 }

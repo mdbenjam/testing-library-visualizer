@@ -39,7 +39,6 @@ function App() {
           availableCommands={availableCommands}
           setInnerHTML={setInnerHTML}
         />
-        <button onClick={() => axios.post("/stop")}>Stop Test</button>
       </div>
       <IFrame className="app">{innerHTML}</IFrame>
     </div>

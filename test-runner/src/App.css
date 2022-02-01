@@ -6,7 +6,12 @@
 }
 
 .console {
-  height: 100px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  width: 450px;
+  justify-content: space-between;
+
 }
 
 .test-iframe {
@@ -17,6 +22,26 @@
   width: 100%;
 }
 
-.code-editor {
-  width: 400px;
+
+button {
+  background-color: rgb(95, 95, 231);
+  color: white;
+  padding: 10px 20px;
+  margin: 5px;
+  border: 1px solid rgb(88, 88, 88);
+  border-radius: 6px;
+  box-shadow: 0 2px 1px rgb(153, 153, 153);
+}
+
+button:hover {
+  background-color: rgb(53, 53, 168);
+}
+
+button:focus {
+  background-color: rgb(33, 33, 119);
+}
+
+.code-window-titles {
+  font-size: 15px;
+  margin: 10px;
 }

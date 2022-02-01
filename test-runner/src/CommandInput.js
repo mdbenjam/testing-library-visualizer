@@ -2,6 +2,7 @@ import { useMemo, useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 
 import Editor from "./Editor";
+import ErrorBoundary from "./ErrorBoundary";
 
 const HISTORY_KEY = "HISTORY";
 const TEST_HISTORY_KEY = "TEST_HISTORY";
@@ -78,11 +79,12 @@ function CommandInput({ setInnerHTML, availableCommands }) {
     axios.post("/reset").then((response) => {
       setInnerHTML(response.data.html);
       setReadOnlyEditor([
-        ...readOnlyEditor,
+        ...readOnlyEditor.slice(0, readOnlyEditor.length - 1),
+        { ...readOnlyEditor[readOnlyEditor.length - 1], wasReset: true },
         {
           content: "",
           errors: [],
-          wasReset: true,
+          wasReset: false,
         },
       ]);
     });
@@ -97,7 +99,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
           acc.content =
             acc.content +
             `${editor.content}\n// <------ ${
-              editor.wasReset ? "Browser Refreshed" : "Test Reset"
+              editor.wasReset ? "Test Reset" : "Browser Refreshed"
             } ------>\n`;
         } else {
           acc.content += editor.content;
@@ -118,21 +120,37 @@ function CommandInput({ setInnerHTML, availableCommands }) {
 
   return (
     <>
-      <Editor
-        content={existingContent.content}
-        availableCommands={availableCommands}
-        errors={existingContent.errors}
-        readonly
-      />
-      <Editor
-        content={editorValue}
-        onContentChange={setEditorValue}
-        availableCommands={availableCommands}
-        submit={submit}
-        commandHistory={commandHistory}
-      />
+      <ErrorBoundary>
+        <Editor
+          content={existingContent.content}
+          availableCommands={availableCommands}
+          errors={existingContent.errors}
+          readonly
+        />
+        <Editor
+          content={editorValue}
+          onContentChange={setEditorValue}
+          availableCommands={availableCommands}
+          submit={submit}
+          commandHistory={commandHistory}
+        />
+      </ErrorBoundary>
       <button onClick={submit}>Submit</button>
       <button onClick={resetTest}>Reset Test</button>
+      <button
+        onClick={() => {
+          window.localStorage.clear();
+          setReadOnlyEditor([
+            {
+              content: "",
+              errors: [],
+              wasReset: false,
+            },
+          ]);
+        }}
+      >
+        Clear history
+      </button>
     </>
   );
 }

@@ -126,7 +126,7 @@ const errorState = StateField.define({
     return RangeSet.empty;
   },
   update(value, transaction) {
-    // value = value.map(transaction.changes);
+    value = value.map(transaction.changes);
 
     const errorEffects = transaction.effects.filter((error) =>
       error.is(errorEffect)

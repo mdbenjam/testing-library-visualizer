@@ -3,8 +3,14 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom";
-import { registerCommands } from "./commandParser";
-import { registerStyling } from "./testingUtil";
+import {
+  registerStyling,
+  setup,
+  registerCommands,
+} from "react-testing-visualizer";
+import path from "path";
+
+setup(path.join(__dirname, "..", "build"));
 
 registerStyling("static/css/test.css");
 registerCommands({

@@ -1,2 +1,5 @@
 *.test.js
 node_modules
+babel.config.cjs
+jest-setup.js
+jest.config.mjs

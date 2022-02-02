@@ -55,7 +55,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
                       line:
                         response.data.error.lineNumber +
                         editor.content.split("\n").length,
-                      message: response.data.error,
+                      message: response.data.error.message,
                     },
                   ]
                 : [...editor.errors],

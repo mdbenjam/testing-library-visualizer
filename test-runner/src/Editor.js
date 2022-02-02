@@ -169,9 +169,10 @@ const cursorTooltipBaseTheme = EditorView.baseTheme({
 const errorHover = hoverTooltip((view, pos, side) => {
   const state = view.state.field(errorState);
   let { from, to } = view.state.doc.lineAt(pos);
-
   for (let iter = state.iter(); iter.value !== null; iter.next()) {
     if (from === iter.from) {
+      console.log(iter.value.errorData);
+
       return {
         pos: from,
         end: to,
@@ -179,7 +180,7 @@ const errorHover = hoverTooltip((view, pos, side) => {
         create(view) {
           let dom = document.createElement("div");
           dom.className = "cm-tooltip-error";
-          dom.innerHTML = `<p>${iter.value.errorData.error.message}</p>`;
+          dom.innerHTML = `<p>${iter.value.errorData.error}</p>`;
           return { dom };
         },
       };
@@ -264,7 +265,7 @@ const setErrors = (codeMirrorRef, errors) => {
 
 export default function Editor({
   onContentChange,
-  availableCommands,
+  availableCommands = {},
   submit,
   content = "",
   commandHistory,
@@ -481,8 +482,9 @@ export default function Editor({
       if (
         codeMirrorRef.current &&
         typeof codeMirrorRef.current.destroy === "function"
-      )
-        codeMirrorRef.current.destory();
+      ) {
+        codeMirrorRef.current.destroy();
+      }
     };
   }, []);
   return (

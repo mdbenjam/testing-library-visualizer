@@ -90,6 +90,12 @@ async function traverseTree(node) {
   }
 }
 
+const removeUnicodeColor = (text) =>
+  text.replace(
+    /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
+    ""
+  );
+
 export async function runCommand(string, consoleLogQueue = []) {
   const parseTree = acorn.parse(string, {
     ecmaVersion: 2020,
@@ -126,6 +132,10 @@ export async function runCommand(string, consoleLogQueue = []) {
 
     return { ok: true, error: null, lineNumber: null };
   } catch (error) {
-    return { ok: false, error, lineNumber };
+    return {
+      ok: false,
+      error: { ...error, message: removeUnicodeColor(error.message) },
+      lineNumber,
+    };
   }
 }

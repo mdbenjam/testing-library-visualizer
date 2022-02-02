@@ -86,7 +86,7 @@ async function getCssFiles() {
     manifest = JSON.parse(rawdata).files;
   } else {
     console.warn(
-      "Could not find asset-manifest.json, this likely means you haven't run `npm run build`. Run `npm run build` in order to see styling and assets."
+      "Could not find asset-manifest.json, this likely means you haven't run `npm run build` or you haven't called the setup function. Run `npm run build` in order to see styling and assets."
     );
     manifest = {};
   }

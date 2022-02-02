@@ -24,7 +24,6 @@
     "@codemirror/view": "^0.19.40",
     "@testing-library/jest-dom": "^5.16.1",
     "@testing-library/react": "^12.1.2",
-    "@testing-library/user-event": "^13.5.0",
     "ace-builds": "^1.4.13",
     "axios": "^0.24.0",
     "react": "^17.0.2",
@@ -32,6 +31,8 @@
     "react-dom": "^17.0.2",
     "react-monaco-editor": "^0.47.0",
     "react-scripts": "^5.0.0",
+    "react-testing-visualizer": "file:../package",
+    "@testing-library/user-event": "^14.0.0-beta",
     "web-vitals": "^2.1.2"
   },
   "proxy": "http://localhost:3001",
@@ -58,5 +59,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "axios-mock-adapter": "^1.20.0"
   }
 }

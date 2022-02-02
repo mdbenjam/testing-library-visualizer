@@ -49,6 +49,9 @@ When you run your test you'll see printed:
 Go to the URL and you should see the debug interface:
 
 
+https://user-images.githubusercontent.com/3885236/152245374-0a60bae9-974e-4d02-9979-001d2e8c9c8e.mp4
+
+
 
 From this interface you can run commands to interact with your test. Specifically, you can run the following built in commands:
 
@@ -68,6 +71,10 @@ Using these commands you can build up a full test interactively.
 ## Errors
 
 All errors are caught by the library and shown via the interactive editor. This enables you to see why commands failed while building up your test.
+
+
+https://user-images.githubusercontent.com/3885236/152245412-e7f47199-a494-4c4d-bc0d-fbc82bc0a7fb.mp4
+
 
 The library also reads from console.error and reports any errors printed out while running a command. These errors cannot be linked to a specific line, since they happen asynchronously, but the library reports them to the user as soon as it detects them. This is especially useful for catching [act warnings](https://kentcdodds.com/blog/fix-the-not-wrapped-in-act-warning).
 

@@ -32,6 +32,7 @@
     "react-monaco-editor": "^0.47.0",
     "react-scripts": "^5.0.0",
     "react-testing-visualizer": "file:../package",
+    "@testing-library/user-event": "^14.0.0-beta",
     "web-vitals": "^2.1.2"
   },
   "proxy": "http://localhost:3001",
@@ -39,8 +40,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "cypress:open": "cypress open"
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
@@ -61,7 +61,6 @@
     ]
   },
   "devDependencies": {
-    "@testing-library/user-event": "^14.0.0-beta",
     "axios-mock-adapter": "^1.20.0"
   }
 }

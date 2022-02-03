@@ -3,6 +3,13 @@ import { render } from "@testing-library/react";
 import { consoleLogQueue, debuggerSetup } from "./testingUtil";
 import { runCommand, availableCommands } from "./commandParser";
 import { useState } from "react";
+import { expect } from "@jest/globals";
+import { screen, within, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+beforeAll(() => {
+  registerCommands({ screen, within, fireEvent, userEvent, expect });
+});
 
 test("parses simple command", async () => {
   render(<>Hello World</>);
@@ -95,4 +102,28 @@ test("reports warnings", async () => {
       ).error.message
     ).toEqual(expect.stringMatching(/not wrapped in act/g));
   });
+});
+
+test("can set variables", async () => {
+  render(<>Hello World</>);
+
+  expect(
+    (
+      await runCommand(`
+    const element = screen.getByText(/Hello/);
+    expect(element).toBeInTheDocument();`)
+    ).error
+  ).toBeNull();
+});
+
+test("can access arrays", async () => {
+  render(<>Hello World</>);
+
+  expect(
+    (
+      await runCommand(`
+    const element = screen.getAllByText(/Hello/)[0];
+    expect(element).toBeInTheDocument();`)
+    ).error
+  ).toBeNull();
 });

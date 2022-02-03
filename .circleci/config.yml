@@ -8,7 +8,7 @@ jobs:
       directory:
         type: string
     docker:
-      - image: circleci/node:12.22.10
+      - image: cimg/node:12.22.10
     working_directory: <<parameters.directory>>
     steps:
       - checkout

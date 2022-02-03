@@ -11,10 +11,10 @@ jobs:
       - image: cimg/node:12.22.10
     steps:
       - checkout
-      - node/install-packages
       - run:
           command: cd <<parameters.directory>>
           name: Run tests
+      - node/install-packages
       - run:
           command: npm run test
           name: Run tests

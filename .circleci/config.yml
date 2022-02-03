@@ -12,16 +12,16 @@ jobs:
     working_directory: <<parameters.directory>>
     steps:
       - checkout
-      - node/install-packages:
+      - node/install-packages
       - run:
-        command: npm run test
-        name: Run tests
+          command: npm run test
+          name: Run tests
 
 
 workflows:
   on_commit:
     jobs:
       - test:
-          directory: /package
+          directory: "/package"
       - test:
-          directory: /test-runner
+          directory: "/test-runner"

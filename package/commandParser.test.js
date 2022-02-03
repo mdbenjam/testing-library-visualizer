@@ -8,7 +8,7 @@ import { screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 beforeAll(() => {
-  registerCommands({ screen, within, fireEvent, userEvent });
+  registerCommands({ screen, within, fireEvent, userEvent, expect });
 });
 
 test("parses simple command", async () => {

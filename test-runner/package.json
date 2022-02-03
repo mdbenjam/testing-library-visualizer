@@ -39,7 +39,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "ci:test": "react-scripts test"
+    "ci:test": "react-scripts test",
+    "lint": "eslint src/**.js --max-warnings=0 && prettier src/**.js --check"
   },
   "eslintConfig": {
     "extends": [
@@ -60,6 +61,7 @@
     ]
   },
   "devDependencies": {
-    "axios-mock-adapter": "^1.20.0"
+    "axios-mock-adapter": "^1.20.0",
+    "prettier": "2.5.1"
   }
 }

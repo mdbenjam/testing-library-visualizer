@@ -8,16 +8,36 @@ jobs:
       directory:
         type: string
     docker:
-      - image: cimg/node:12.22.10
+      - image: cimg/node:17.4.0
     steps:
       - checkout
       - node/install-packages:
           app-dir: <<parameters.directory>>
           cache-version: <<parameters.directory>>-1
       - run:
+          command: npm run lint
+          name: Run linter
+          working_directory: <<parameters.directory>>
+      - run:
           command: npm run ci:test
           name: Run tests
           working_directory: <<parameters.directory>>
+  deploy:
+    docker:
+      - image: cimg/node:17.4.0
+    steps:
+      - checkout
+      - run:
+          name: Build UI
+          command: ./build.sh
+          working_directory: test-runner
+      - run:
+          name: Authenticate with registry
+          command: echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > ~/repo/.npmrc
+      - run:
+          name: Publish package
+          command: npm publish
+          working_directory: package
 
 
 
@@ -30,3 +50,12 @@ workflows:
       - test:
           name: "Test Runner Tests"
           directory: "test-runner"
+      - deploy:
+        requires:
+          - Package Tests
+          - Test Runner Tests
+        filters:
+          tags:
+            only: /^v.*/
+          branches:
+            ignore: /.*/

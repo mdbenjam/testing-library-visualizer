@@ -98,13 +98,13 @@ async function getCssFiles() {
 }
 
 export function replaceFilePaths(html, manifest) {
-  const srcReplaced = html.replace(/src=\"(.*?)\"/, (_match, p1) => {
+  const srcReplaced = html.replace(/src="(.*?)"/, (_match, p1) => {
     return `src="/${ASSET_DIRECTORY}${
       manifest[p1] || manifest["static/media/" + p1] || p1
     }"`;
   });
 
-  const hrefReplaced = srcReplaced.replace(/href=\"(.*?)\"/, (_match, p1) => {
+  const hrefReplaced = srcReplaced.replace(/href="(.*?)"/, (_match, p1) => {
     return `href="/${ASSET_DIRECTORY}${
       manifest[p1] || manifest["static/media/" + p1] || p1
     }"`;

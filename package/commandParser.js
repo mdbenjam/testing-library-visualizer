@@ -1,6 +1,3 @@
-import { expect } from "@jest/globals";
-import { screen, within, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 const util = require("util");
 
 let acorn = require("acorn");
@@ -28,11 +25,11 @@ function refresh() {
 }
 
 let IDENTIFIER_MAP = {
-  screen,
-  expect,
-  fireEvent,
-  userEvent,
-  within,
+  // screen,
+  // expect,
+  // fireEvent,
+  // userEvent,
+  // within,
   highlight,
   refresh,
 };

@@ -31,7 +31,7 @@ export const debugTest = async (name, fn) => {
       try {
         await debuggerSetup(async () => {
           await start(() => {
-            evaluator = Evaluator();
+            evaluator = new Evaluator();
             fn();
           });
         });

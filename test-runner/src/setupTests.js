@@ -3,8 +3,13 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom";
-import { setup } from "react-testing-visualizer";
+import { setup, registerCommands } from "react-testing-visualizer";
 import path from "path";
+import { expect } from "@jest/globals";
+import { screen, within, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+registerCommands({ screen, within, fireEvent, userEvent });
 
 setup(path.join(__dirname, "..", "build"));
 

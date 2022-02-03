@@ -3,6 +3,13 @@ import { render } from "@testing-library/react";
 import { consoleLogQueue, debuggerSetup } from "./testingUtil";
 import { runCommand, availableCommands } from "./commandParser";
 import { useState } from "react";
+import { expect } from "@jest/globals";
+import { screen, within, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+beforeAll(() => {
+  registerCommands({ screen, within, fireEvent, userEvent });
+});
 
 test("parses simple command", async () => {
   render(<>Hello World</>);

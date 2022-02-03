@@ -239,6 +239,8 @@ const setText = (codeMirrorRef, content) => {
 
 const setErrors = (codeMirrorRef, errors) => {
   if (!codeMirrorRef.current || !errors) return;
+  console.log(errors);
+
   const existingErrorState = codeMirrorRef.current.state.field(errorState);
 
   const existingErrors = [];

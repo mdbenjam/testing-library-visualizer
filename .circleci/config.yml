@@ -11,19 +11,20 @@ jobs:
       - image: cimg/node:12.22.10
     steps:
       - checkout
-      - run:
-          command: cd <<parameters.directory>>
-          name: Run tests
       - node/install-packages
       - run:
           command: npm run test
           name: Run tests
+          working_directory: <<parameters.directory>>
+
 
 
 workflows:
   on_commit:
     jobs:
       - test:
+          name: "Package Tests"
           directory: "package"
       - test:
+          name: "Test Runner Tests"
           directory: "test-runner"

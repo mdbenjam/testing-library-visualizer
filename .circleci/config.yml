@@ -1,0 +1,27 @@
+version: 2.1
+orbs:
+  node: circleci/node@4.7.0
+  
+jobs:
+  test:
+    parameters:
+      directory:
+        type: string
+    docker:
+      - image: circleci/node:12.22.10
+    working_directory: <<parameters.directory>>
+    steps:
+      - checkout
+      - node/install-packages:
+      - run:
+        command: npm run test
+        name: Run tests
+
+
+workflows:
+  on_commit:
+    jobs:
+      - test:
+          directory: /package
+      - test:
+          directory: /test-runner

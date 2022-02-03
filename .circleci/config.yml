@@ -9,10 +9,12 @@ jobs:
         type: string
     docker:
       - image: cimg/node:12.22.10
-    working_directory: <<parameters.directory>>
     steps:
       - checkout
       - node/install-packages
+      - run:
+          command: cd <<parameters.directory>>
+          name: Run tests
       - run:
           command: npm run test
           name: Run tests

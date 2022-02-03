@@ -25,11 +25,6 @@ function refresh() {
 }
 
 let IDENTIFIER_MAP = {
-  // screen,
-  // expect,
-  // fireEvent,
-  // userEvent,
-  // within,
   highlight,
   refresh,
 };

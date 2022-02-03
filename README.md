@@ -18,8 +18,13 @@ import {
   setup,
 } from "react-testing-visualizer";
 import path from "path";
+import { expect } from "@jest/globals";
+import { screen, within, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 setup(path.join(__dirname, "..", "build")); // This should point to wherever your built assets are
+
+registerCommands({ screen, within, fireEvent, userEvent, expect }); // This should include any commands you want to run. See the custom command section below.
 ```
 
 ## Debugging a test
@@ -33,7 +38,7 @@ import { debugTest } from "react-testing-visualizer";
 Then replace `test` with `debugTest`. For example:
 
 ```javascript
-import { render, screen, waitFor } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import App from "./App";
 import { debugTest } from "react-testing-visualizer";
 
@@ -56,15 +61,20 @@ https://user-images.githubusercontent.com/3885236/152245374-0a60bae9-974e-4d02-9
 From this interface you can run commands to interact with your test. Specifically, you can run the following built in commands:
 
 ```
-screen
-within
-userEvent
-fireEvent
 highlight
 refresh
 ```
 
-The first four are commands defined by Testing Library. Highlight and refresh are defined by Testing Library Visualizer. `highlight` takes a HTML element(s) and draws boxes around them. This is a good way to understand what components you're selecting with your testing library commands. `refresh` asks for the latest state of the application. This is useful when an operation might take some time to complete, and you want to see the most up to date version of the component you're testing.
+And if you configured your test setup as specified above you'll have access to:
+
+```
+screen
+within
+userEvent
+fireEvent
+```
+
+Highlight and refresh are defined by Testing Library Visualizer. `highlight` takes a HTML element(s) and draws boxes around them. This is a good way to understand what components you're selecting with your testing library commands. `refresh` asks for the latest state of the application. This is useful when an operation might take some time to complete, and you want to see the most up to date version of the component you're testing.
 
 Using these commands you can build up a full test interactively.
 

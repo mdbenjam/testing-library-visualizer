@@ -1,13 +1,17 @@
 {
   "name": "react-testing-visualizer",
-  "version": "0.1.1",
+  "version": "0.1.8",
   "description": "A companion library to react-testing-library to help write, debug, and visualize your tests.",
-  "main": "index.js",
+  "exports": "./lib/index.js",
+  "main": "./lib/index.js",
   "type": "module",
   "scripts": {
     "test": "jest --watch",
     "ci:test": "jest",
     "build": "babel src -d lib"
+  },
+  "engines": {
+    "node": ">=15"
   },
   "repository": {
     "type": "git",
@@ -40,6 +44,7 @@
     "babel-jest": "^27.4.6",
     "jest": "^27.4.7",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react-dom": "^17.0.2",
+    "webpack-cli": "^4.9.2"
   }
 }

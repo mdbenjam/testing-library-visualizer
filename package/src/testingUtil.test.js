@@ -1,4 +1,4 @@
-import { replaceFilePaths } from "./testingUtil";
+import { replaceFilePaths } from "./testingUtil.js";
 
 const assetManifest = {
   "main.css": "/static/css/main.073c9b0a.css",

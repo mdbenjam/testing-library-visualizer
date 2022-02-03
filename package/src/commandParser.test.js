@@ -1,11 +1,11 @@
 import React from "react";
 import { render } from "@testing-library/react";
-import { consoleLogQueue, debuggerSetup } from "./testingUtil";
+import { consoleLogQueue, debuggerSetup } from "./testingUtil.js";
 import {
   runCommand,
   availableCommands,
   registerCommands,
-} from "./commandParser";
+} from "./commandParser.js";
 import { useState } from "react";
 import { expect } from "@jest/globals";
 import { screen, within, fireEvent } from "@testing-library/react";

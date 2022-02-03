@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import fastifyStatic from "fastify-static";
 import path from "path";
 import fs from "fs";
-import { runCommand, availableCommands, Evaluator } from "./commandParser";
+import { runCommand, availableCommands, Evaluator } from "./commandParser.js";
 import { cleanup } from "@testing-library/react";
 
 const fastify = Fastify({

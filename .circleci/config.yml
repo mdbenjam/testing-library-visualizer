@@ -13,6 +13,7 @@ jobs:
       - checkout
       - node/install-packages:
           app-dir: <<parameters.directory>>
+          cache-version: <<parameters.directory>>-1
       - run:
           command: npm run ci:test
           name: Run tests

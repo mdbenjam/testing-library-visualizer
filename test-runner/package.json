@@ -24,6 +24,7 @@
     "@codemirror/view": "^0.19.40",
     "@testing-library/jest-dom": "^5.16.1",
     "@testing-library/react": "^12.1.2",
+    "@testing-library/user-event": "^14.0.0-beta",
     "ace-builds": "^1.4.13",
     "axios": "^0.24.0",
     "react": "^17.0.2",
@@ -32,7 +33,6 @@
     "react-monaco-editor": "^0.47.0",
     "react-scripts": "^5.0.0",
     "react-testing-visualizer": "file:../package",
-    "@testing-library/user-event": "^14.0.0-beta",
     "web-vitals": "^2.1.2"
   },
   "proxy": "http://localhost:3001",
@@ -40,7 +40,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "ci:test": "react-scripts test",
   },
   "eslintConfig": {
     "extends": [

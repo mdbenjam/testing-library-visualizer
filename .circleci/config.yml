@@ -14,7 +14,7 @@ jobs:
       - node/install-packages:
           app-dir: <<parameters.directory>>
       - run:
-          command: npm run test
+          command: npm run ci:test
           name: Run tests
           working_directory: <<parameters.directory>>
 

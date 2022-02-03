@@ -96,3 +96,27 @@ test("reports warnings", async () => {
     ).toEqual(expect.stringMatching(/not wrapped in act/g));
   });
 });
+
+test("can set variables", async () => {
+  render(<>Hello World</>);
+
+  expect(
+    (
+      await runCommand(`
+    const element = screen.getByText(/Hello/);
+    expect(element).toBeInTheDocument();`)
+    ).error
+  ).toBeNull();
+});
+
+test("can access arrays", async () => {
+  render(<>Hello World</>);
+
+  expect(
+    (
+      await runCommand(`
+    const element = screen.getAllByText(/Hello/)[0];
+    expect(element).toBeInTheDocument();`)
+    ).error
+  ).toBeNull();
+});

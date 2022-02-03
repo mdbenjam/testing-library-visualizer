@@ -1,6 +1,6 @@
 {
   "name": "react-testing-visualizer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A companion library to react-testing-library to help write, debug, and visualize your tests.",
   "main": "index.js",
   "type": "module",

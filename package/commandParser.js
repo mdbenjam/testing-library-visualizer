@@ -48,44 +48,79 @@ export const availableCommands = () => {
   }, {});
 };
 
-async function traverseTree(node) {
-  if (node.type === "ExpressionStatement") {
-    await traverseTree(node.expression);
+export class Evaluator {
+  constructor() {
+    this.variables = {};
+    this.traverseTree = this.traverseTree.bind(this);
   }
 
-  if (node.type === "AwaitExpression") {
-    return await traverseTree(node.argument);
-  }
-
-  if (node.type === "Literal") {
-    return node.value;
-  }
-
-  if (node.type === "Identifier") {
-    if (IDENTIFIER_MAP[node.name]) {
-      return IDENTIFIER_MAP[node.name];
-    } else {
-      throw new TypeError(`"${node.name}" is not valid`);
+  async traverseTree(node) {
+    if (node.type === "ExpressionStatement") {
+      await this.traverseTree(node.expression);
     }
-  }
 
-  if (node.type === "CallExpression") {
-    const func = await traverseTree(node.callee);
-    const args = await Promise.all(
-      node.arguments.map(async (arg) => await traverseTree(arg))
-    );
-    const output = await func(...args);
-    return output;
-  }
+    if (node.type === "AwaitExpression") {
+      return await this.traverseTree(node.argument);
+    }
 
-  if (node.type === "MemberExpression") {
-    const treeTraversal = await traverseTree(node.object);
-    const result = treeTraversal[node.property.name];
+    if (node.type === "Literal") {
+      return node.value;
+    }
 
-    if (result) {
-      return result;
-    } else {
-      throw new TypeError(`"${node.property.name}" is not a valid property.`);
+    if (node.type === "Identifier") {
+      if (IDENTIFIER_MAP[node.name]) {
+        return IDENTIFIER_MAP[node.name];
+      } else if (this.variables[node.name]) {
+        return this.variables[node.name];
+      } else {
+        throw new TypeError(`"${node.name}" is not valid`);
+      }
+    }
+
+    if (node.type === "VariableDeclaration") {
+      await Promise.all(
+        node.declarations.map(
+          async (declaration) => await this.traverseTree(declaration)
+        )
+      );
+    }
+
+    if (node.type === "VariableDeclarator") {
+      this.variables[node.id.name] = await this.traverseTree(node.init);
+    }
+
+    if (node.type === "CallExpression") {
+      const func = await this.traverseTree(node.callee);
+      const args = await Promise.all(
+        node.arguments.map(async (arg) => await this.traverseTree(arg))
+      );
+      const output = await func(...args);
+      return output;
+    }
+
+    if (node.type === "MemberExpression") {
+      const treeTraversal = await this.traverseTree(node.object);
+      if (node.property.type === "Identifier") {
+        const result = treeTraversal[node.property.name];
+        if (result) {
+          return result;
+        } else {
+          throw new TypeError(
+            `"${node.property.name}" is not a valid property.`
+          );
+        }
+      } else if (node.property.type === "Literal") {
+        const result = treeTraversal[node.property.value];
+        if (result) {
+          return result;
+        } else {
+          throw new RangeError(
+            `"${node.property.value}" is beyond the length of ${treeTraversal}.`
+          );
+        }
+      } else {
+        throw new SyntaxError(`"${node.property.type}" is not recognized.`);
+      }
     }
   }
 }
@@ -96,7 +131,11 @@ const removeUnicodeColor = (text) =>
     ""
   );
 
-export async function runCommand(string, consoleLogQueue = []) {
+export async function runCommand(
+  string,
+  consoleLogQueue = [],
+  evaluator = new Evaluator()
+) {
   const parseTree = acorn.parse(string, {
     ecmaVersion: 2020,
     allowAwaitOutsideFunction: true,
@@ -110,7 +149,7 @@ export async function runCommand(string, consoleLogQueue = []) {
     }
 
     for (const statement of parseTree.body) {
-      await traverseTree(statement);
+      await evaluator.traverseTree(statement);
       lineNumber += 1;
     }
     lineNumber -= 1;
@@ -125,7 +164,7 @@ export async function runCommand(string, consoleLogQueue = []) {
       if (consoleLog.method === "error" && !consoleLog.seen) {
         consoleLog.seen = true;
         throw Error(
-          `Error printed to console.error. This error occured asynchronously, and may have happened before this line was executed.\n\n${consoleLog.arguments[0]}`
+          `Error printed to console.error. This error occurred asynchronously, and may have happened before this line was executed.\n\n${consoleLog.arguments[0]}`
         );
       }
     }

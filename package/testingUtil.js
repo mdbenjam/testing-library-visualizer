@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import fastifyStatic from "fastify-static";
 import path from "path";
 import fs from "fs";
-import { runCommand, availableCommands } from "./commandParser";
+import { runCommand, availableCommands, Evaluator } from "./commandParser";
 import { cleanup } from "@testing-library/react";
 
 const fastify = Fastify({
@@ -22,13 +22,18 @@ export const setup = (directory) => {
   });
 };
 
+let evaluator = null;
+
 export const debugTest = async (name, fn) => {
   await test(
     name,
     async () => {
       try {
         await debuggerSetup(async () => {
-          await start(fn);
+          await start(() => {
+            evaluator = Evaluator();
+            fn();
+          });
         });
       } catch (error) {
         throw error;
@@ -94,13 +99,13 @@ async function getCssFiles() {
 
 export function replaceFilePaths(html, manifest) {
   const srcReplaced = html.replace(/src=\"(.*?)\"/, (_match, p1) => {
-    return `src="${ASSET_DIRECTORY}/${
+    return `src="/${ASSET_DIRECTORY}${
       manifest[p1] || manifest["static/media/" + p1] || p1
     }"`;
   });
 
   const hrefReplaced = srcReplaced.replace(/href=\"(.*?)\"/, (_match, p1) => {
-    return `href="${ASSET_DIRECTORY}/${
+    return `href="/${ASSET_DIRECTORY}${
       manifest[p1] || manifest["static/media/" + p1] || p1
     }"`;
   });
@@ -132,7 +137,6 @@ fastify.register(fastifyStatic, {
 });
 
 fastify.get("/", async (request, reply) => {
-  console.log("inside", path.join(__dirname, "build", "index.html"));
   return reply.sendFile("index.html", path.join(__dirname, "build"));
 });
 
@@ -161,7 +165,11 @@ fastify.post("/reset", async (request, reply) => {
 });
 
 fastify.post("/command", async (request, reply) => {
-  const output = await runCommand(request.body.command, consoleLogQueue);
+  const output = await runCommand(
+    request.body.command,
+    consoleLogQueue,
+    evaluator
+  );
 
   return {
     html: addStyleLinks(

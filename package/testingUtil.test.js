@@ -16,6 +16,6 @@ test("replace assets properly", async () => {
   const html = `<body><img src="logo.svg" class="App-logo" alt="logo"></body>`;
 
   expect(replaceFilePaths(html, assetManifest)).toEqual(
-    `<body><img src="/static/media/logo.6ce24c58023cc2f8fd88fe9d219db6c6.svg" class="App-logo" alt="logo"></body>`
+    `<body><img src="/assets/static/media/logo.6ce24c58023cc2f8fd88fe9d219db6c6.svg" class="App-logo" alt="logo"></body>`
   );
 });

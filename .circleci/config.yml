@@ -51,11 +51,11 @@ workflows:
           name: "Test Runner Tests"
           directory: "test-runner"
       - deploy:
-        requires:
-          - Package Tests
-          - Test Runner Tests
-        filters:
-          tags:
-            only: /^v.*/
-          branches:
-            ignore: /.*/
+          requires:
+            - "Package Tests"
+            - "Test Runner Tests"
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/

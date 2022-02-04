@@ -96,15 +96,16 @@ const commandHistoryState = StateField.define({
     return { index: 0, commandHistory: [] };
   },
   update(value, transaction) {
+    let newValue = value;
     for (const effect of transaction.effects) {
       if (effect.is(updateCommandHistoryEffect)) {
-        return { ...value, commandHistory: effect.value.commandHistory };
+        newValue = { ...newValue, commandHistory: effect.value.commandHistory };
       }
       if (effect.is(updateHistoryIndexEffect)) {
-        return { ...value, index: effect.value.index };
+        newValue = { ...newValue, index: effect.value.index };
       }
     }
-    return value;
+    return newValue;
   },
 });
 
@@ -212,8 +213,12 @@ const underlineTheme = EditorView.baseTheme({
 
 const setCodeHistory = (codeMirrorRef, commandHistory) => {
   if (!codeMirrorRef.current) return;
+  console.log("settingCodeHistory");
   codeMirrorRef.current.dispatch({
-    effects: updateCommandHistoryEffect.of({ commandHistory }),
+    effects: [
+      updateCommandHistoryEffect.of({ commandHistory }),
+      updateHistoryIndexEffect.of({ index: 0 }),
+    ],
   });
 };
 

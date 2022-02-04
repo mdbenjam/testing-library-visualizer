@@ -57,16 +57,16 @@ jobs:
 workflows:
   on_commit:
     jobs:
-      # - test:
-      #     name: "Package Tests"
-      #     directory: "package"
-      # - test:
-      #     name: "Test Runner Tests"
-      #     directory: "test-runner"
+      - test:
+          name: "Package Tests"
+          directory: "package"
+      - test:
+          name: "Test Runner Tests"
+          directory: "test-runner"
       - deploy:
-          # requires:
-          #   - "Package Tests"
-          #   - "Test Runner Tests"
+          requires:
+            - "Package Tests"
+            - "Test Runner Tests"
           filters:
             branches:
-              only: fix-deploy
+              only: main

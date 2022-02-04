@@ -2,7 +2,7 @@ import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import Editor from "./Editor";
 import userEvent from "@testing-library/user-event";
-import { debugTest } from "react-testing-visualizer";
+
 const EditorWrapper = (props) => {
   const [content, setContent] = useState("");
 

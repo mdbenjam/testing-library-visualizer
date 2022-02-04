@@ -22,22 +22,29 @@ jobs:
           command: npm run ci:test
           name: Run tests
           working_directory: <<parameters.directory>>
-      - persist_to_workspace:
-          root: ~/project
-          paths: .
   deploy:
     docker:
       - image: cimg/node:17.4.0
     steps:
-      - attach_workspace:
-          at: ~/project
+      - checkout
+      - node/install-packages:
+          app-dir: test-runner
+          cache-version: test-runner-1
+      - run:
+          name: Remove cached package link from node/install-packages
+          command: |
+            rm /tmp/node-project-lockfile
+            rm /tmp/node-project-package.json
+      - node/install-packages:
+          app-dir: package
+          cache-version: package-1
       - run:
           name: Build UI
           command: ./build.sh
           working_directory: test-runner
       - run:
-          name: Build UI
-          command: npm build
+          name: Build package
+          command: npm run build
           working_directory: package
       - run:
           name: Semantic Version

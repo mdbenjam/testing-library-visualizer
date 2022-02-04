@@ -22,6 +22,9 @@ jobs:
           command: npm run ci:test
           name: Run tests
           working_directory: <<parameters.directory>>
+      - persist_to_workspace:
+          root: ~/repo
+          paths: .
   deploy:
     docker:
       - image: cimg/node:17.4.0
@@ -42,6 +45,8 @@ jobs:
           name: Publish package
           command: npm publish
           working_directory: package
+      - attach_workspace:
+          at: ~/repo
 
 
 
@@ -54,6 +59,24 @@ workflows:
       - test:
           name: "Test Runner Tests"
           directory: "test-runner"
+  on_tag:
+    jobs:
+      - test:
+          name: "Package Tests"
+          directory: "package"
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+      - test:
+          name: "Test Runner Tests"
+          directory: "test-runner"
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
       - deploy:
           requires:
             - "Package Tests"
@@ -62,4 +85,4 @@ workflows:
             tags:
               only: /^v.*/
             branches:
-              only: main
+              ignore: /.*/

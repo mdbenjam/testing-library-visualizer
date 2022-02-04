@@ -32,6 +32,10 @@ jobs:
           command: ./build.sh
           working_directory: test-runner
       - run:
+          name: Build UI
+          command: npm build
+          working_directory: package
+      - run:
           name: Authenticate with registry
           command: echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > ~/repo/.npmrc
       - run:

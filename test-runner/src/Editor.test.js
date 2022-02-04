@@ -34,3 +34,26 @@ test("can render error tooltip in editor", async () => {
   await user.hover(await screen.findByText(/hello/));
   expect(await screen.findByText(/This is an error/)).toBeInTheDocument();
 });
+
+test("command history is reset when changed", async () => {
+  const user = userEvent.setup();
+
+  const { rerender } = render(<EditorWrapper commandHistory={["old"]} />);
+
+  await user.click(screen.getByRole("textbox"));
+  await user.keyboard("[ControlLeft>][ArrowUp][/ControlLeft]");
+
+  await expect(await screen.findByText(/old/)).toBeInTheDocument();
+
+  rerender(
+    <EditorWrapper
+      errors={[{ message: "This is an error", line: 1 }]}
+      commandHistory={["new", "old"]}
+    />
+  );
+
+  await user.click(screen.getByRole("textbox"));
+  await user.keyboard("[ControlLeft>][ArrowUp][/ControlLeft]");
+
+  await expect(await screen.findByText(/new/)).toBeInTheDocument();
+});

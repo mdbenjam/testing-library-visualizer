@@ -32,7 +32,7 @@ jobs:
           cache-version: test-runner-1
       - run:
           name: Remove cached package link from node/install-packages
-          command: /tmp/node-project-lockfile
+          command: unlink /tmp/node-project-lockfile
       - node/install-packages:
           app-dir: package
           cache-version: package-1

@@ -7,7 +7,7 @@ import {
   highlightActiveLine,
   dropCursor,
 } from "@codemirror/view";
-import { RangeSet, Range } from "@codemirror/rangeset";
+import { RangeSet } from "@codemirror/rangeset";
 import { EditorState, StateField, StateEffect } from "@codemirror/state";
 import { EditorView, Decoration } from "@codemirror/view";
 import { history, historyKeymap } from "@codemirror/history";
@@ -348,147 +348,155 @@ export default function Editor({
     });
   }, [onContentChange]);
 
-  useEffect(() => {
-    if (codeEditorRef.current) {
-      const ctrlCursorArrowUp = (props) => {
-        const { state, dispatch } = props;
-        const commandHistory = state.field(commandHistoryState);
+  useEffect(
+    () => {
+      if (codeEditorRef.current) {
+        const ctrlCursorArrowUp = (props) => {
+          const { state, dispatch } = props;
+          const commandHistory = state.field(commandHistoryState);
 
-        const newIndex = Math.min(
-          commandHistory.index + 1,
-          commandHistory.commandHistory.length
-        );
-        dispatch({
-          effects: updateHistoryIndexEffect.of({ index: newIndex }),
-          changes: {
-            from: 0,
-            to: state.doc.length,
-            insert: commandHistory.commandHistory[newIndex - 1],
+          const newIndex = Math.min(
+            commandHistory.index + 1,
+            commandHistory.commandHistory.length
+          );
+          dispatch({
+            effects: updateHistoryIndexEffect.of({ index: newIndex }),
+            changes: {
+              from: 0,
+              to: state.doc.length,
+              insert: commandHistory.commandHistory[newIndex - 1],
+            },
+          });
+        };
+
+        const ctrlCursorArrowDown = (props) => {
+          const { state, dispatch } = props;
+          const commandHistory = state.field(commandHistoryState);
+
+          const newIndex = Math.max(commandHistory.index - 1, 0);
+
+          dispatch({
+            effects: updateHistoryIndexEffect.of({ index: newIndex }),
+            changes: {
+              from: 0,
+              to: state.doc.length,
+              insert:
+                newIndex === 0
+                  ? ""
+                  : commandHistory.commandHistory[newIndex - 1],
+            },
+          });
+        };
+
+        const previousCommandsKeyMap = [
+          {
+            key: "Ctrl-ArrowUp",
+            mac: "Cmd-ArrowUp",
+            run: ctrlCursorArrowUp,
+            preventDefault: true,
           },
+          {
+            key: "Ctrl-ArrowDown",
+            mac: "Cmd-ArrowDown",
+            run: ctrlCursorArrowDown,
+            preventDefault: true,
+          },
+        ];
+
+        const sendCommandKeyMap = [
+          {
+            key: "Ctrl-Enter",
+            mac: "Cmd-Enter",
+            run: ({ state }) => {
+              state.field(submitFunctionState).submit();
+            },
+            preventDefault: true,
+          },
+        ];
+        let state = EditorState.create({
+          doc: "",
+          extensions: [
+            [errorGutter, lineNumbers()],
+            highlightActiveLineGutter(),
+            highlightSpecialChars(),
+            history(),
+            foldGutter(),
+            drawSelection(),
+            dropCursor(),
+            EditorState.allowMultipleSelections.of(true),
+            indentOnInput(),
+            defaultHighlightStyle.fallback,
+            bracketMatching(),
+            closeBrackets(),
+            autocompletion(),
+            rectangularSelection(),
+            highlightActiveLine(),
+            highlightSelectionMatches(),
+            keymap.of([
+              ...sendCommandKeyMap,
+              ...closeBracketsKeymap,
+              ...defaultKeymap,
+              ...searchKeymap,
+              ...historyKeymap,
+              ...foldKeymap,
+              ...commentKeymap,
+              ...completionKeymap,
+              ...lintKeymap,
+              ...previousCommandsKeyMap,
+            ]),
+            javascript(),
+            autocompletion({ override: [myCompletions] }),
+            oneDarkHighlightStyle,
+            oneDarkTheme,
+            fixedHeightEditor,
+            updateListener,
+            submitFunctionState,
+            commandHistoryState,
+            errorHover,
+            cursorTooltipBaseTheme,
+            underlineTheme,
+            EditorView.editable.of(!readonly),
+          ],
         });
-      };
-
-      const ctrlCursorArrowDown = (props) => {
-        const { state, dispatch } = props;
-        const commandHistory = state.field(commandHistoryState);
-
-        const newIndex = Math.max(commandHistory.index - 1, 0);
-
-        dispatch({
-          effects: updateHistoryIndexEffect.of({ index: newIndex }),
-          changes: {
-            from: 0,
-            to: state.doc.length,
-            insert:
-              newIndex === 0 ? "" : commandHistory.commandHistory[newIndex - 1],
-          },
+        if (
+          codeMirrorRef.current &&
+          typeof codeMirrorRef.current.destroy === "function"
+        ) {
+          codeMirrorRef.current.destroy();
+        }
+        codeMirrorRef.current = new EditorView({
+          state,
+          parent: codeEditorRef.current,
         });
+        codeMirrorRef.current.focus();
+        setCodeHistory(codeMirrorRef, commandHistory);
+        setText(codeMirrorRef, content);
+        setErrors(codeMirrorRef, errors);
+      }
+    }, // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      codeEditorRef,
+      codeMirrorRef,
+      myCompletions,
+      codeHistory,
+      updateListener,
+      readonly,
+    ]
+  );
+
+  useEffect(
+    () => {
+      return () => {
+        if (
+          codeMirrorRef.current &&
+          typeof codeMirrorRef.current.destroy === "function"
+        ) {
+          codeMirrorRef.current.destroy();
+        }
       };
-
-      const previousCommandsKeyMap = [
-        {
-          key: "Ctrl-ArrowUp",
-          mac: "Cmd-ArrowUp",
-          run: ctrlCursorArrowUp,
-          preventDefault: true,
-        },
-        {
-          key: "Ctrl-ArrowDown",
-          mac: "Cmd-ArrowDown",
-          run: ctrlCursorArrowDown,
-          preventDefault: true,
-        },
-      ];
-
-      const sendCommandKeyMap = [
-        {
-          key: "Ctrl-Enter",
-          mac: "Cmd-Enter",
-          run: ({ state }) => {
-            state.field(submitFunctionState).submit();
-          },
-          preventDefault: true,
-        },
-      ];
-      let state = EditorState.create({
-        doc: "",
-        extensions: [
-          [errorGutter, lineNumbers()],
-          highlightActiveLineGutter(),
-          highlightSpecialChars(),
-          history(),
-          foldGutter(),
-          drawSelection(),
-          dropCursor(),
-          EditorState.allowMultipleSelections.of(true),
-          indentOnInput(),
-          defaultHighlightStyle.fallback,
-          bracketMatching(),
-          closeBrackets(),
-          autocompletion(),
-          rectangularSelection(),
-          highlightActiveLine(),
-          highlightSelectionMatches(),
-          keymap.of([
-            ...sendCommandKeyMap,
-            ...closeBracketsKeymap,
-            ...defaultKeymap,
-            ...searchKeymap,
-            ...historyKeymap,
-            ...foldKeymap,
-            ...commentKeymap,
-            ...completionKeymap,
-            ...lintKeymap,
-            ...previousCommandsKeyMap,
-          ]),
-          javascript(),
-          autocompletion({ override: [myCompletions] }),
-          oneDarkHighlightStyle,
-          oneDarkTheme,
-          fixedHeightEditor,
-          updateListener,
-          submitFunctionState,
-          commandHistoryState,
-          errorHover,
-          cursorTooltipBaseTheme,
-          underlineTheme,
-          EditorView.editable.of(!readonly),
-        ],
-      });
-      if (
-        codeMirrorRef.current &&
-        typeof codeMirrorRef.current.destroy === "function"
-      ) {
-        codeMirrorRef.current.destroy();
-      }
-      codeMirrorRef.current = new EditorView({
-        state,
-        parent: codeEditorRef.current,
-      });
-      codeMirrorRef.current.focus();
-      setCodeHistory(codeMirrorRef, commandHistory);
-      setText(codeMirrorRef, content);
-      setErrors(codeMirrorRef, errors);
-    }
-  }, [
-    codeEditorRef,
-    codeMirrorRef,
-    myCompletions,
-    codeHistory,
-    updateListener,
-    readonly,
-  ]);
-
-  useEffect(() => {
-    return () => {
-      if (
-        codeMirrorRef.current &&
-        typeof codeMirrorRef.current.destroy === "function"
-      ) {
-        codeMirrorRef.current.destroy();
-      }
-    };
-  }, []);
+    }, // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
   return (
     <>
       <div className="code-editor" ref={codeEditorRef} />

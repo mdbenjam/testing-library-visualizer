@@ -1,5 +1,3 @@
-const util = require("util");
-
 let acorn = require("acorn");
 
 const HIGHLIGHT_CLASS_NAME = "react-test-highlight-element";
@@ -119,6 +117,7 @@ export class Evaluator {
 
 const removeUnicodeColor = (text) =>
   text.replace(
+    // eslint-disable-next-line no-control-regex
     /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
     ""
   );

@@ -1,12 +1,18 @@
 {
   "name": "react-testing-visualizer",
-  "version": "0.1.1",
+  "version": "0.1.9",
   "description": "A companion library to react-testing-library to help write, debug, and visualize your tests.",
-  "main": "index.js",
+  "exports": "./lib/index.js",
+  "main": "./lib/index.js",
   "type": "module",
   "scripts": {
     "test": "jest --watch",
-    "build": "babel src -d lib"
+    "ci:test": "jest",
+    "build": "babel src -d lib",
+    "lint": "eslint src/**.js --max-warnings=0 && prettier src/**.js --check"
+  },
+  "engines": {
+    "node": ">=15"
   },
   "repository": {
     "type": "git",
@@ -32,13 +38,17 @@
     "@babel/core": "^7.16.12",
     "@babel/plugin-transform-react-jsx": "^7.16.7",
     "@babel/preset-env": "^7.16.11",
-    "babel-jest": "^27.4.6",
-    "jest": "^27.4.7",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
     "@testing-library/dom": "^8.11.1",
     "@testing-library/jest-dom": "^5.16.1",
     "@testing-library/react": "^12.1.2",
-    "@testing-library/user-event": "^13.5.0"
+    "@testing-library/user-event": "^13.5.0",
+    "babel-jest": "^27.4.6",
+    "eslint": "^8.8.0",
+    "eslint-config-react-app": "^7.0.0",
+    "jest": "^27.4.7",
+    "prettier": "2.5.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "webpack-cli": "^4.9.2"
   }
 }

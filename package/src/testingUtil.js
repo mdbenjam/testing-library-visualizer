@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import fastifyStatic from "fastify-static";
 import path from "path";
 import fs from "fs";
-import { runCommand, availableCommands, Evaluator } from "./commandParser";
+import { runCommand, availableCommands, Evaluator } from "./commandParser.js";
 import { cleanup } from "@testing-library/react";
 
 const fastify = Fastify({
@@ -98,13 +98,13 @@ async function getCssFiles() {
 }
 
 export function replaceFilePaths(html, manifest) {
-  const srcReplaced = html.replace(/src=\"(.*?)\"/, (_match, p1) => {
+  const srcReplaced = html.replace(/src="(.*?)"/, (_match, p1) => {
     return `src="/${ASSET_DIRECTORY}${
       manifest[p1] || manifest["static/media/" + p1] || p1
     }"`;
   });
 
-  const hrefReplaced = srcReplaced.replace(/href=\"(.*?)\"/, (_match, p1) => {
+  const hrefReplaced = srcReplaced.replace(/href="(.*?)"/, (_match, p1) => {
     return `href="/${ASSET_DIRECTORY}${
       manifest[p1] || manifest["static/media/" + p1] || p1
     }"`;

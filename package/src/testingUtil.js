@@ -130,14 +130,14 @@ function addStyleLinks(html) {
 }
 
 fastify.register(fastifyStatic, {
-  root: path.join(__dirname, "build"),
+  root: path.join(__dirname, "..", "build"),
   prefix: "/", // optional: default '/'
   wildcard: true,
   decorateReply: false,
 });
 
 fastify.get("/", async (request, reply) => {
-  return reply.sendFile("index.html", path.join(__dirname, "build"));
+  return reply.sendFile("index.html", path.join(__dirname, "..", "build"));
 });
 
 fastify.get("/load", async (request, reply) => {
@@ -200,7 +200,7 @@ export const start = async (setupFunction) => {
     await getCssFiles();
     await setupFunction();
     await fastify.listen(3001);
-    console.log("Debug server is running, open at 127.0.0.1:3001");
+    console.log("Debug server is running, open at localhost:3001");
     while (isListening) {
       await sleep(50);
     }

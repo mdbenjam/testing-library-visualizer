@@ -1,2 +1,2 @@
 npm run build
-cp -r build ../package/lib
+cp -r build ../package/

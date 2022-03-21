@@ -25,7 +25,9 @@ function refresh() {
 let IDENTIFIER_MAP = {
   highlight,
   refresh,
+  console,
 };
+
 export const registerCommands = (commands) => {
   IDENTIFIER_MAP = { ...IDENTIFIER_MAP, ...commands };
 };
@@ -133,6 +135,7 @@ export async function runCommand(
   });
 
   var lineNumber = 0;
+  let consoleLogMessages = [];
 
   try {
     if (parseTree.type !== "Program") {
@@ -151,21 +154,39 @@ export async function runCommand(
 
     await delay(10);
 
+    console.log(consoleLogQueue);
+
     for (const consoleLog of consoleLogQueue) {
+      if (consoleLog.method === "log" && !consoleLog.seen) {
+        consoleLog.seen = true;
+        for (const arg of consoleLog.arguments) {
+          if (typeof arg === "string") {
+            consoleLogMessages.push(arg);
+          }
+        }
+      }
       if (consoleLog.method === "error" && !consoleLog.seen) {
         consoleLog.seen = true;
         throw Error(
-          `Error printed to console.error. This error occurred asynchronously, and may have happened before this line was executed.\n\n${consoleLog.arguments[0]}`
+          `Error printed to console.error. This error occurred asynchronously, and may have happened before this line was executed.\n\n${consoleLog.arguments.join(
+            " "
+          )}`
         );
       }
     }
 
-    return { ok: true, error: null, lineNumber: null };
+    return {
+      ok: true,
+      error: null,
+      lineNumber: null,
+      consoleLog: consoleLogMessages.join("\n"),
+    };
   } catch (error) {
     return {
       ok: false,
       error: { ...error, message: removeUnicodeColor(error.message) },
       lineNumber,
+      consoleLog: consoleLogMessages.join("\n"),
     };
   }
 }

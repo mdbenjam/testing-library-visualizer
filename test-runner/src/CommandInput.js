@@ -22,11 +22,13 @@ function CommandInput({ setInnerHTML, availableCommands }) {
       {
         content: "",
         errors: [],
+        consoleLog: [],
         wasReset: false,
       },
     ];
   });
   const [editorValue, setEditorValue] = useState("");
+  const [output, setOutput] = useState("");
 
   useEffect(() => {
     window.localStorage.setItem(HISTORY_KEY, JSON.stringify(commandHistory));
@@ -59,6 +61,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
                     },
                   ]
                 : [...editor.errors],
+              consoleLog: response.data.consoleLog,
             };
           } else {
             return { ...editor };
@@ -66,6 +69,14 @@ function CommandInput({ setInnerHTML, availableCommands }) {
         })
       );
       setEditorValue("");
+      let outputArray = [];
+      if (response.data.consoleLog) {
+        outputArray.push(`Output: ${response.data.consoleLog}`);
+      }
+      if (response.data.error?.message) {
+        outputArray.push(`Error: ${response.data.error.message}`);
+      }
+      setOutput(outputArray.join("\n\n"));
     });
   }, [
     commandHistory,
@@ -84,6 +95,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
         {
           content: "",
           errors: [],
+          consoleLog: [],
           wasReset: false,
         },
       ]);
@@ -112,17 +124,19 @@ function CommandInput({ setInnerHTML, availableCommands }) {
           })),
         ];
 
+        acc.consoleLog = [...acc.consoleLog, editor.consoleLog];
+
         return acc;
       },
-      { errors: [], content: "" }
+      { errors: [], content: "", consoleLog: [] }
     );
   }, [readOnlyEditor]);
 
   return (
     <>
       <ErrorBoundary>
+        <h1 className="code-window-titles">Code History</h1>
         <div className="editor-div">
-          <h1 className="code-window-titles">Code History</h1>
           <Editor
             content={existingContent.content}
             availableCommands={availableCommands}
@@ -130,8 +144,16 @@ function CommandInput({ setInnerHTML, availableCommands }) {
             readonly
           />
         </div>
+        <h1 className="code-window-titles">Output</h1>
         <div className="editor-div">
-          <h1 className="code-window-titles">Code Input</h1>
+          <Editor
+            content={output}
+            availableCommands={availableCommands}
+            readonly
+          />
+        </div>
+        <h1 className="code-window-titles">Code Input</h1>
+        <div className="editor-div">
           <Editor
             content={editorValue}
             onContentChange={setEditorValue}

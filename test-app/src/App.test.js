@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import App from "./App";
-import { debugTest } from "react-testing-visualizer";
+import { debugTest } from "testing-library-visualizer";
 
 debugTest("renders learn react link", async () => {
   render(<App />);

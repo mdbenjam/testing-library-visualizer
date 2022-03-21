@@ -40,7 +40,7 @@ import {
 const completePropertyAfter = ["PropertyName", ".", "?."];
 
 const fixedHeightEditor = EditorView.theme({
-  "&": { height: "calc(50vh - 100px)" },
+  "&": { height: "100%" },
   ".cm-scroller": { overflow: "auto" },
 });
 
@@ -437,6 +437,7 @@ export default function Editor({
             rectangularSelection(),
             highlightActiveLine(),
             highlightSelectionMatches(),
+            EditorView.lineWrapping,
             keymap.of([
               ...sendCommandKeyMap,
               ...closeBracketsKeymap,
@@ -504,7 +505,11 @@ export default function Editor({
   );
   return (
     <>
-      <div className="code-editor" ref={codeEditorRef} />
+      <div
+        className="code-editor"
+        style={{ height: "100%" }}
+        ref={codeEditorRef}
+      />
     </>
   );
 }

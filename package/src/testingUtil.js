@@ -180,6 +180,7 @@ fastify.post("/command", async (request, reply) => {
       message: output.error.message,
       lineNumber: output.lineNumber,
     },
+    consoleLog: output.consoleLog,
   };
 });
 

@@ -110,37 +110,57 @@ const commandHistoryState = StateField.define({
 });
 
 class ErrorGutterMarker extends GutterMarker {
-  constructor(errorData) {
+  constructor(data) {
     super();
-    this.errorData = errorData;
+    this.data = data;
   }
 
   toDOM() {
     return document.createTextNode("🛑");
   }
 }
+class WarnGutterMarker extends GutterMarker {
+  constructor(data) {
+    super();
+    this.data = data;
+  }
+
+  toDOM() {
+    return document.createTextNode("⚠️");
+  }
+}
 const underlineMark = Decoration.mark({ class: "cm-underline" });
 
-const errorEffect = StateEffect.define({});
-const errorState = StateField.define({
+const consoleEffect = StateEffect.define({});
+const consoleState = StateField.define({
   create() {
     return RangeSet.empty;
   },
   update(value, transaction) {
     value = value.map(transaction.changes);
 
-    const errorEffects = transaction.effects.filter((error) =>
-      error.is(errorEffect)
+    const consoleEffects = transaction.effects.filter((error) =>
+      error.is(consoleEffect)
     );
-    value = value.update({
-      add: errorEffects.map((error) => {
-        return new ErrorGutterMarker(error.value).range(
-          error.value.from,
-          error.value.to
-        );
-      }),
-      sort: true,
-    });
+    if (consoleEffects.length > 0) {
+      value = value.update({
+        filter: () => false,
+        add: consoleEffects.map((consoleEff) => {
+          if (consoleEff.value.type === "error") {
+            return new ErrorGutterMarker(consoleEff.value).range(
+              consoleEff.value.from,
+              consoleEff.value.to
+            );
+          } else {
+            return new WarnGutterMarker(consoleEff.value).range(
+              consoleEff.value.from,
+              consoleEff.value.to
+            );
+          }
+        }),
+        sort: true,
+      });
+    }
 
     return value;
   },
@@ -148,9 +168,12 @@ const errorState = StateField.define({
     return EditorView.decorations.from(field, (value) => {
       let marks = Decoration.none;
       for (let iter = value.iter(); iter.value !== null; iter.next()) {
-        marks = marks.update({
-          add: [underlineMark.range(iter.from, iter.to)],
-        });
+        // console.log(underlineMark, iter.from, iter.to, iter);
+        if (iter.to > iter.from) {
+          marks = marks.update({
+            add: [underlineMark.range(iter.from, iter.to)],
+          });
+        }
       }
 
       return marks;
@@ -167,12 +190,12 @@ const cursorTooltipBaseTheme = EditorView.baseTheme({
   },
 });
 
-const errorHover = hoverTooltip((view, pos, side) => {
-  const state = view.state.field(errorState);
+const consoleHover = hoverTooltip((view, pos, side) => {
+  const state = view.state.field(consoleState);
   let { from, to } = view.state.doc.lineAt(pos);
   for (let iter = state.iter(); iter.value !== null; iter.next()) {
     if (from === iter.from) {
-      console.log(iter.value.errorData);
+      // console.log(iter.value.data);
 
       return {
         pos: from,
@@ -181,7 +204,9 @@ const errorHover = hoverTooltip((view, pos, side) => {
         create(view) {
           let dom = document.createElement("div");
           dom.className = "cm-tooltip-error";
-          dom.innerHTML = `<p>${iter.value.errorData.error}</p>`;
+          dom.innerHTML = `<p><ul>${iter.value.data.value
+            .split("\n\n")
+            .map((val) => `<li>${val}</li>`)}</ul></p>`;
           return { dom };
         },
       };
@@ -192,10 +217,10 @@ const errorHover = hoverTooltip((view, pos, side) => {
 });
 
 const errorGutter = [
-  errorState,
+  consoleState,
   gutter({
     class: "cm-breakpoint-gutter",
-    markers: (v) => v.state.field(errorState),
+    markers: (v) => v.state.field(consoleState),
     initialSpacer: () => new ErrorGutterMarker(),
   }),
   EditorView.baseTheme({
@@ -213,7 +238,7 @@ const underlineTheme = EditorView.baseTheme({
 
 const setCodeHistory = (codeMirrorRef, commandHistory) => {
   if (!codeMirrorRef.current) return;
-  console.log("settingCodeHistory");
+  // console.log("settingCodeHistory");
   codeMirrorRef.current.dispatch({
     effects: [
       updateCommandHistoryEffect.of({ commandHistory }),
@@ -242,31 +267,20 @@ const setText = (codeMirrorRef, content) => {
   codeMirrorRef.current.dispatch({ effects: scrollEffect });
 };
 
-const setErrors = (codeMirrorRef, errors) => {
-  if (!codeMirrorRef.current || !errors) return;
-  console.log(errors);
+const setConsoleOutputs = (codeMirrorRef, consoleOutputs) => {
+  if (!codeMirrorRef.current || !consoleOutputs) return;
 
-  const existingErrorState = codeMirrorRef.current.state.field(errorState);
-
-  const existingErrors = [];
-  for (let iter = existingErrorState.iter(); iter.value !== null; iter.next()) {
-    existingErrors.push(iter.value);
-  }
+  const effects = consoleOutputs.map((output) => {
+    return consoleEffect.of({
+      from: codeMirrorRef.current.state.doc.line(output.lineNumber).from,
+      to: codeMirrorRef.current.state.doc.line(output.lineNumber).to,
+      value: output.message,
+      type: output.type,
+    });
+  });
 
   codeMirrorRef.current.dispatch({
-    effects: errors
-      .map((error) => {
-        return errorEffect.of({
-          from: codeMirrorRef.current.state.doc.line(error.line).from,
-          to: codeMirrorRef.current.state.doc.line(error.line).to,
-          error: error.message,
-        });
-      })
-      .filter((error) => {
-        return !existingErrors.find(
-          (existingError) => existingError.errorData.from === error.value.from
-        );
-      }),
+    effects,
   });
 };
 
@@ -276,7 +290,7 @@ export default function Editor({
   submit,
   content = "",
   commandHistory,
-  errors = [],
+  consoleOutputs = [],
   readonly = false,
 }) {
   const codeEditorRef = useRef();
@@ -298,8 +312,8 @@ export default function Editor({
   }, [content, codeMirrorRef]);
 
   useEffect(() => {
-    setErrors(codeMirrorRef, errors);
-  }, [errors, codeMirrorRef]);
+    setConsoleOutputs(codeMirrorRef, consoleOutputs);
+  }, [consoleOutputs, codeMirrorRef]);
 
   const myCompletions = useCallback(
     (context) => {
@@ -458,7 +472,7 @@ export default function Editor({
             updateListener,
             submitFunctionState,
             commandHistoryState,
-            errorHover,
+            consoleHover,
             cursorTooltipBaseTheme,
             underlineTheme,
             EditorView.editable.of(!readonly),
@@ -477,7 +491,7 @@ export default function Editor({
         codeMirrorRef.current.focus();
         setCodeHistory(codeMirrorRef, commandHistory);
         setText(codeMirrorRef, content);
-        setErrors(codeMirrorRef, errors);
+        setConsoleOutputs(codeMirrorRef, consoleOutputs);
       }
     }, // eslint-disable-next-line react-hooks/exhaustive-deps
     [

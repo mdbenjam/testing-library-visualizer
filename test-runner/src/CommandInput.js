@@ -7,6 +7,30 @@ import ErrorBoundary from "./ErrorBoundary";
 const HISTORY_KEY = "HISTORY";
 const TEST_HISTORY_KEY = "TEST_HISTORY";
 
+function combineConsoleOutputs(consoleOutputs) {
+  console.log(consoleOutputs);
+  return consoleOutputs
+    .map((output) =>
+      output.type === "error"
+        ? `Error: ${output.message}`
+        : `Output: ${output.message}`
+    )
+    .join("\n\n");
+}
+
+function combineOutputsType(consoleOutputs) {
+  return consoleOutputs.some((output) => output.type === "error")
+    ? "error"
+    : "log";
+}
+
+function groupByLineNumber(consoleOutputs) {
+  return consoleOutputs.reduce((acc, output) => {
+    acc[output.lineNumber] = [...(acc[output.lineNumber] || []), output];
+    return acc;
+  }, {});
+}
+
 function CommandInput({ setInnerHTML, availableCommands }) {
   const [commandHistory, setCommandHistory] = useState(() =>
     window.localStorage.getItem(HISTORY_KEY)
@@ -21,8 +45,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
       ...existingHistory,
       {
         content: "",
-        errors: [],
-        consoleLog: [],
+        consoleOutputs: [],
         wasReset: false,
       },
     ];
@@ -50,18 +73,20 @@ function CommandInput({ setInnerHTML, availableCommands }) {
           if (index === readOnlyEditor.length - 1) {
             return {
               content: editor.content + editorValue + "\n",
-              errors: response.data.error
+              consoleOutputs: response.data.consoleOutputs
                 ? [
-                    ...editor.errors,
-                    {
-                      line:
-                        response.data.error.lineNumber +
+                    ...editor.consoleOutputs,
+                    ...Object.entries(
+                      groupByLineNumber(response.data.consoleOutputs)
+                    ).map(([lineNumber, outputs]) => ({
+                      message: combineConsoleOutputs(outputs),
+                      type: combineOutputsType(outputs),
+                      lineNumber:
+                        parseInt(lineNumber) +
                         editor.content.split("\n").length,
-                      message: response.data.error.message,
-                    },
+                    })),
                   ]
-                : [...editor.errors],
-              consoleLog: response.data.consoleLog,
+                : [...editor.consoleOutputs],
             };
           } else {
             return { ...editor };
@@ -69,14 +94,8 @@ function CommandInput({ setInnerHTML, availableCommands }) {
         })
       );
       setEditorValue("");
-      let outputArray = [];
-      if (response.data.consoleLog) {
-        outputArray.push(`Output: ${response.data.consoleLog}`);
-      }
-      if (response.data.error?.message) {
-        outputArray.push(`Error: ${response.data.error.message}`);
-      }
-      setOutput(outputArray.join("\n\n"));
+
+      setOutput(combineConsoleOutputs(response.data.consoleOutputs));
     });
   }, [
     commandHistory,
@@ -94,8 +113,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
         { ...readOnlyEditor[readOnlyEditor.length - 1], wasReset: true },
         {
           content: "",
-          errors: [],
-          consoleLog: [],
+          consoleOutputs: [],
           wasReset: false,
         },
       ]);
@@ -116,19 +134,18 @@ function CommandInput({ setInnerHTML, availableCommands }) {
         } else {
           acc.content += editor.content;
         }
-        acc.errors = [
-          ...acc.errors,
-          ...editor.errors.map((error) => ({
-            ...error,
-            line: error.line + currentLine,
+        acc.consoleOutputs = [
+          ...acc.consoleOutputs,
+          ...editor.consoleOutputs.map((output) => ({
+            ...output,
+            lineNumber: output.lineNumber + currentLine,
           })),
         ];
-
-        acc.consoleLog = [...acc.consoleLog, editor.consoleLog];
+        console.log(acc.consoleOutputs, editor.consoleOutputs);
 
         return acc;
       },
-      { errors: [], content: "", consoleLog: [] }
+      { content: "", consoleOutputs: [] }
     );
   }, [readOnlyEditor]);
 
@@ -140,7 +157,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
           <Editor
             content={existingContent.content}
             availableCommands={availableCommands}
-            errors={existingContent.errors}
+            consoleOutputs={existingContent.consoleOutputs}
             readonly
           />
         </div>

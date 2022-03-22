@@ -61,6 +61,9 @@ export const debuggerSetup = async (fn) => {
     consoleLogQueue.push({ method: "log", arguments: arguments });
     return _log.apply(console, arguments);
   };
+  console.orig_log = function () {
+    return _log.apply(console, arguments);
+  };
 
   console.warn = function () {
     consoleLogQueue.push({ method: "warn", arguments: arguments });
@@ -175,12 +178,7 @@ fastify.post("/command", async (request, reply) => {
     html: addStyleLinks(
       replaceFilePaths(document.documentElement.innerHTML, manifest)
     ),
-    error: output.error && {
-      name: output.error.name,
-      message: output.error.message,
-      lineNumber: output.lineNumber,
-    },
-    consoleLog: output.consoleLog,
+    consoleOutputs: output.consoleOutputs,
   };
 });
 

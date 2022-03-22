@@ -135,7 +135,7 @@ export async function runCommand(
   });
 
   var lineNumber = 0;
-  let consoleLogMessages = [];
+  let consoleOutputs = [];
 
   try {
     if (parseTree.type !== "Program") {
@@ -154,39 +154,45 @@ export async function runCommand(
 
     await delay(10);
 
-    console.log(consoleLogQueue);
-
     for (const consoleLog of consoleLogQueue) {
-      if (consoleLog.method === "log" && !consoleLog.seen) {
+      if (!consoleLog.seen) {
         consoleLog.seen = true;
+
         for (const arg of consoleLog.arguments) {
-          if (typeof arg === "string") {
-            consoleLogMessages.push(arg);
+          if (consoleLog.method === "error") {
+            consoleOutputs.push({
+              type: "error",
+              message: `Error printed to console.error. This error occurred asynchronously, and may have happened before this line was executed.\n\n${arg}`,
+              lineNumber: 0,
+            });
+          } else {
+            consoleOutputs.push({
+              message: String(arg),
+              type: consoleLog.method,
+              lineNumber: 0,
+            });
           }
         }
-      }
-      if (consoleLog.method === "error" && !consoleLog.seen) {
-        consoleLog.seen = true;
-        throw Error(
-          `Error printed to console.error. This error occurred asynchronously, and may have happened before this line was executed.\n\n${consoleLog.arguments.join(
-            " "
-          )}`
-        );
       }
     }
 
     return {
       ok: true,
       error: null,
-      lineNumber: null,
-      consoleLog: consoleLogMessages.join("\n"),
+      consoleOutputs,
     };
   } catch (error) {
     return {
       ok: false,
-      error: { ...error, message: removeUnicodeColor(error.message) },
-      lineNumber,
-      consoleLog: consoleLogMessages.join("\n"),
+      error: { ...error },
+      consoleOutputs: [
+        ...consoleOutputs,
+        {
+          type: "error",
+          message: removeUnicodeColor(error.message),
+          lineNumber,
+        },
+      ],
     };
   }
 }

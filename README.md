@@ -90,7 +90,7 @@ The library also reads from console.error and reports any errors printed out whi
 
 ## History
 
-The library maintains the list of commands run in the upper read only code editor. It also maintains a buffer of previous commands that can be accessed in the code input section by using `super+arrow up/down`. This history is stored in local storage so that you can access it between test runs. You can clear this history by using the `Clear History` button.
+The library maintains the list of commands run in the upper read only code editor. It also maintains a buffer of previous commands that can be accessed in the code input section by using `ctrl+arrow up/down` (`alt+arrow up/down` on Mac). This history is stored in local storage so that you can access it between test runs. You can clear this history by using the `Clear History` button.
 
 ## Restarting Tests
 
@@ -130,3 +130,10 @@ registerCommands({
 
 You can pass an object to `registerCommands` where each key is the name of the command, and the value is the function it will run when invoked.
 
+## Shortcuts
+
+| Key | Shortcut|
+---
+| Ctrl + Arrow Up/Down (Mac: Alt + Arrow Up/Down) | Navigate history |
+| Ctrl + Enter (Mac: Cmd + Enter) | Submit command |
+| Esc then Tab | Tab out of the command editor. Without hitting escape first, tab acts to indent |

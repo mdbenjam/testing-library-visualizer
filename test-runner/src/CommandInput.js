@@ -172,7 +172,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
             setReadOnlyEditor([
               {
                 content: "",
-                errors: [],
+                consoleOutputs: [],
                 wasReset: false,
               },
             ]);

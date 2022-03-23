@@ -432,11 +432,13 @@ export default function Editor({
         const previousCommandsKeyMap = [
           {
             key: "Mod-ArrowUp",
+            mac: "Alt-ArrowUp",
             run: ctrlCursorArrowUp,
             preventDefault: true,
           },
           {
             key: "Mod-ArrowDown",
+            mac: "Alt-ArrowDown",
             run: ctrlCursorArrowDown,
             preventDefault: true,
           },

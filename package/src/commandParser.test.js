@@ -86,7 +86,7 @@ function TestComponent() {
   return (
     <>
       {text}
-      <button onClick={() => setTimeout(() => setText("Goodbye"), 5)}>
+      <button onClick={() => setTimeout(() => setText("Goodbye"), 0)}>
         click me
       </button>
     </>
@@ -96,15 +96,28 @@ function TestComponent() {
 test("reports warnings", async () => {
   await debuggerSetup(async () => {
     render(<TestComponent />);
+    const output = (
+      await runCommand(
+        "userEvent.click(screen.getByText('click me'))",
+        consoleLogQueue
+      )
+    ).consoleOutputs[0];
+    expect(output.message).toEqual(
+      expect.stringMatching(/not wrapped in act/g)
+    );
+    expect(output.type).toEqual("error");
+  });
+});
 
-    expect(
-      (
-        await runCommand(
-          "userEvent.click(screen.getByText('click me'))",
-          consoleLogQueue
-        )
-      ).error.message
-    ).toEqual(expect.stringMatching(/not wrapped in act/g));
+test("reports console logs", async () => {
+  await debuggerSetup(async () => {
+    render(<TestComponent />);
+
+    const output = (
+      await runCommand("console.log('hello world')", consoleLogQueue)
+    ).consoleOutputs[0];
+    expect(output.message).toEqual(expect.stringMatching(/hello world/g));
+    expect(output.type).toEqual("log");
   });
 });
 

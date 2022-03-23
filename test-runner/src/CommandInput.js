@@ -7,6 +7,16 @@ import ErrorBoundary from "./ErrorBoundary";
 const HISTORY_KEY = "HISTORY";
 const TEST_HISTORY_KEY = "TEST_HISTORY";
 
+function combineConsoleOutputs(consoleOutputs) {
+  return consoleOutputs
+    .map((output) =>
+      output.type === "error"
+        ? `Error: ${output.message}`
+        : `Output: ${output.message}`
+    )
+    .join("\n\n");
+}
+
 function CommandInput({ setInnerHTML, availableCommands }) {
   const [commandHistory, setCommandHistory] = useState(() =>
     window.localStorage.getItem(HISTORY_KEY)
@@ -21,12 +31,13 @@ function CommandInput({ setInnerHTML, availableCommands }) {
       ...existingHistory,
       {
         content: "",
-        errors: [],
+        consoleOutputs: [],
         wasReset: false,
       },
     ];
   });
   const [editorValue, setEditorValue] = useState("");
+  const [output, setOutput] = useState("");
 
   useEffect(() => {
     window.localStorage.setItem(HISTORY_KEY, JSON.stringify(commandHistory));
@@ -48,17 +59,17 @@ function CommandInput({ setInnerHTML, availableCommands }) {
           if (index === readOnlyEditor.length - 1) {
             return {
               content: editor.content + editorValue + "\n",
-              errors: response.data.error
+              consoleOutputs: response.data.consoleOutputs
                 ? [
-                    ...editor.errors,
-                    {
-                      line:
-                        response.data.error.lineNumber +
-                        editor.content.split("\n").length,
-                      message: response.data.error.message,
-                    },
+                    ...editor.consoleOutputs,
+                    ...response.data.consoleOutputs.map((output) => ({
+                      message: output.message,
+                      type: output.type,
+                      lineNumber:
+                        output.lineNumber + editor.content.split("\n").length,
+                    })),
                   ]
-                : [...editor.errors],
+                : [...editor.consoleOutputs],
             };
           } else {
             return { ...editor };
@@ -66,6 +77,8 @@ function CommandInput({ setInnerHTML, availableCommands }) {
         })
       );
       setEditorValue("");
+
+      setOutput(combineConsoleOutputs(response.data.consoleOutputs));
     });
   }, [
     commandHistory,
@@ -83,7 +96,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
         { ...readOnlyEditor[readOnlyEditor.length - 1], wasReset: true },
         {
           content: "",
-          errors: [],
+          consoleOutputs: [],
           wasReset: false,
         },
       ]);
@@ -104,34 +117,42 @@ function CommandInput({ setInnerHTML, availableCommands }) {
         } else {
           acc.content += editor.content;
         }
-        acc.errors = [
-          ...acc.errors,
-          ...editor.errors.map((error) => ({
-            ...error,
-            line: error.line + currentLine,
+        acc.consoleOutputs = [
+          ...acc.consoleOutputs,
+          ...editor.consoleOutputs.map((output) => ({
+            ...output,
+            lineNumber: output.lineNumber + currentLine,
           })),
         ];
 
         return acc;
       },
-      { errors: [], content: "" }
+      { content: "", consoleOutputs: [] }
     );
   }, [readOnlyEditor]);
 
   return (
     <>
       <ErrorBoundary>
-        <div className="editor-div">
-          <h1 className="code-window-titles">Code History</h1>
+        <h1 className="code-window-titles">Code History</h1>
+        <div className="editor-div" data-testid="command-history">
           <Editor
             content={existingContent.content}
             availableCommands={availableCommands}
-            errors={existingContent.errors}
+            consoleOutputs={existingContent.consoleOutputs}
             readonly
           />
         </div>
-        <div className="editor-div">
-          <h1 className="code-window-titles">Code Input</h1>
+        <h1 className="code-window-titles">Output</h1>
+        <div className="editor-div" data-testid="command-output">
+          <Editor
+            content={output}
+            availableCommands={availableCommands}
+            readonly
+          />
+        </div>
+        <h1 className="code-window-titles">Code Input</h1>
+        <div className="editor-div" data-testid="command-input">
           <Editor
             content={editorValue}
             onContentChange={setEditorValue}
@@ -150,7 +171,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
             setReadOnlyEditor([
               {
                 content: "",
-                errors: [],
+                consoleOutputs: [],
                 wasReset: false,
               },
             ]);

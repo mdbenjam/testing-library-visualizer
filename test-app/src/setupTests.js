@@ -7,14 +7,13 @@ import {
   registerStyling,
   setup,
   registerCommands,
-} from "react-testing-visualizer";
+} from "testing-library-visualizer";
 import path from "path";
+import { screen, within, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 setup(path.join(__dirname, "..", "build"));
 
 registerStyling("static/css/test.css");
-registerCommands({
-  test: () => {
-    console.log("test command");
-  },
-});
+
+registerCommands({ screen, within, fireEvent, userEvent, expect });

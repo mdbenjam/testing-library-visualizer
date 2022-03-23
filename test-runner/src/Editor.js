@@ -40,7 +40,7 @@ import {
 const completePropertyAfter = ["PropertyName", ".", "?."];
 
 const fixedHeightEditor = EditorView.theme({
-  "&": { height: "calc(50vh - 100px)" },
+  "&": { height: "100%" },
   ".cm-scroller": { overflow: "auto" },
 });
 
@@ -110,37 +110,58 @@ const commandHistoryState = StateField.define({
 });
 
 class ErrorGutterMarker extends GutterMarker {
-  constructor(errorData) {
+  constructor(data) {
     super();
-    this.errorData = errorData;
+    this.data = data;
   }
 
   toDOM() {
-    return document.createTextNode("🛑");
+    return document.createTextNode("🔴");
   }
 }
-const underlineMark = Decoration.mark({ class: "cm-underline" });
+class WarnGutterMarker extends GutterMarker {
+  constructor(data) {
+    super();
+    this.data = data;
+  }
 
-const errorEffect = StateEffect.define({});
-const errorState = StateField.define({
+  toDOM() {
+    return document.createTextNode("⚠️");
+  }
+}
+const underlineErrorMark = Decoration.mark({ class: "cm-underline-error" });
+const underlineWarningMark = Decoration.mark({ class: "cm-underline-warning" });
+
+const consoleEffect = StateEffect.define({});
+const consoleState = StateField.define({
   create() {
     return RangeSet.empty;
   },
   update(value, transaction) {
     value = value.map(transaction.changes);
 
-    const errorEffects = transaction.effects.filter((error) =>
-      error.is(errorEffect)
+    const consoleEffects = transaction.effects.filter((error) =>
+      error.is(consoleEffect)
     );
-    value = value.update({
-      add: errorEffects.map((error) => {
-        return new ErrorGutterMarker(error.value).range(
-          error.value.from,
-          error.value.to
-        );
-      }),
-      sort: true,
-    });
+    if (consoleEffects.length > 0) {
+      value = value.update({
+        filter: () => false,
+        add: consoleEffects.map((consoleEff) => {
+          if (consoleEff.value.type === "error") {
+            return new ErrorGutterMarker(consoleEff.value).range(
+              consoleEff.value.from,
+              consoleEff.value.to
+            );
+          } else {
+            return new WarnGutterMarker(consoleEff.value).range(
+              consoleEff.value.from,
+              consoleEff.value.to
+            );
+          }
+        }),
+        sort: true,
+      });
+    }
 
     return value;
   },
@@ -148,9 +169,17 @@ const errorState = StateField.define({
     return EditorView.decorations.from(field, (value) => {
       let marks = Decoration.none;
       for (let iter = value.iter(); iter.value !== null; iter.next()) {
-        marks = marks.update({
-          add: [underlineMark.range(iter.from, iter.to)],
-        });
+        if (iter.to > iter.from) {
+          if (iter.value.data.type === "error") {
+            marks = marks.update({
+              add: [underlineErrorMark.range(iter.from, iter.to)],
+            });
+          } else {
+            marks = marks.update({
+              add: [underlineWarningMark.range(iter.from, iter.to)],
+            });
+          }
+        }
       }
 
       return marks;
@@ -167,13 +196,11 @@ const cursorTooltipBaseTheme = EditorView.baseTheme({
   },
 });
 
-const errorHover = hoverTooltip((view, pos, side) => {
-  const state = view.state.field(errorState);
+const consoleHover = hoverTooltip((view, pos, side) => {
+  const state = view.state.field(consoleState);
   let { from, to } = view.state.doc.lineAt(pos);
   for (let iter = state.iter(); iter.value !== null; iter.next()) {
     if (from === iter.from) {
-      console.log(iter.value.errorData);
-
       return {
         pos: from,
         end: to,
@@ -181,7 +208,9 @@ const errorHover = hoverTooltip((view, pos, side) => {
         create(view) {
           let dom = document.createElement("div");
           dom.className = "cm-tooltip-error";
-          dom.innerHTML = `<p>${iter.value.errorData.error}</p>`;
+          dom.innerHTML = iter.value.data.value
+            .map((message) => `<p>${message}</p>`)
+            .join("");
           return { dom };
         },
       };
@@ -192,10 +221,10 @@ const errorHover = hoverTooltip((view, pos, side) => {
 });
 
 const errorGutter = [
-  errorState,
+  consoleState,
   gutter({
     class: "cm-breakpoint-gutter",
-    markers: (v) => v.state.field(errorState),
+    markers: (v) => v.state.field(consoleState),
     initialSpacer: () => new ErrorGutterMarker(),
   }),
   EditorView.baseTheme({
@@ -207,13 +236,17 @@ const errorGutter = [
   }),
 ];
 
-const underlineTheme = EditorView.baseTheme({
-  ".cm-underline": { textDecoration: "underline 1px red wavy" },
+const errorUnderlineTheme = EditorView.baseTheme({
+  ".cm-underline-error": { textDecoration: "underline 1px red wavy" },
+});
+
+const warningUnderlineTheme = EditorView.baseTheme({
+  ".cm-underline-warning": { textDecoration: "underline 1px #ccac01 wavy" },
 });
 
 const setCodeHistory = (codeMirrorRef, commandHistory) => {
   if (!codeMirrorRef.current) return;
-  console.log("settingCodeHistory");
+
   codeMirrorRef.current.dispatch({
     effects: [
       updateCommandHistoryEffect.of({ commandHistory }),
@@ -242,31 +275,35 @@ const setText = (codeMirrorRef, content) => {
   codeMirrorRef.current.dispatch({ effects: scrollEffect });
 };
 
-const setErrors = (codeMirrorRef, errors) => {
-  if (!codeMirrorRef.current || !errors) return;
-  console.log(errors);
+function combineOutputsType(consoleOutputs) {
+  return consoleOutputs.some((output) => output.type === "error")
+    ? "error"
+    : "log";
+}
 
-  const existingErrorState = codeMirrorRef.current.state.field(errorState);
+function groupByLineNumber(consoleOutputs) {
+  return consoleOutputs.reduce((acc, output) => {
+    acc[output.lineNumber] = [...(acc[output.lineNumber] || []), output];
+    return acc;
+  }, {});
+}
 
-  const existingErrors = [];
-  for (let iter = existingErrorState.iter(); iter.value !== null; iter.next()) {
-    existingErrors.push(iter.value);
-  }
+const setConsoleOutputs = (codeMirrorRef, consoleOutputs) => {
+  if (!codeMirrorRef.current || !consoleOutputs) return;
+
+  const outputsByLine = groupByLineNumber(consoleOutputs);
+
+  const effects = Object.entries(outputsByLine).map(([lineNumber, outputs]) => {
+    return consoleEffect.of({
+      from: codeMirrorRef.current.state.doc.line(lineNumber).from,
+      to: codeMirrorRef.current.state.doc.line(lineNumber).to,
+      value: outputs.map((output) => output.message),
+      type: combineOutputsType(outputs),
+    });
+  });
 
   codeMirrorRef.current.dispatch({
-    effects: errors
-      .map((error) => {
-        return errorEffect.of({
-          from: codeMirrorRef.current.state.doc.line(error.line).from,
-          to: codeMirrorRef.current.state.doc.line(error.line).to,
-          error: error.message,
-        });
-      })
-      .filter((error) => {
-        return !existingErrors.find(
-          (existingError) => existingError.errorData.from === error.value.from
-        );
-      }),
+    effects,
   });
 };
 
@@ -276,7 +313,7 @@ export default function Editor({
   submit,
   content = "",
   commandHistory,
-  errors = [],
+  consoleOutputs = [],
   readonly = false,
 }) {
   const codeEditorRef = useRef();
@@ -298,8 +335,8 @@ export default function Editor({
   }, [content, codeMirrorRef]);
 
   useEffect(() => {
-    setErrors(codeMirrorRef, errors);
-  }, [errors, codeMirrorRef]);
+    setConsoleOutputs(codeMirrorRef, consoleOutputs);
+  }, [consoleOutputs, codeMirrorRef]);
 
   const myCompletions = useCallback(
     (context) => {
@@ -437,6 +474,7 @@ export default function Editor({
             rectangularSelection(),
             highlightActiveLine(),
             highlightSelectionMatches(),
+            EditorView.lineWrapping,
             keymap.of([
               ...sendCommandKeyMap,
               ...closeBracketsKeymap,
@@ -457,9 +495,10 @@ export default function Editor({
             updateListener,
             submitFunctionState,
             commandHistoryState,
-            errorHover,
+            consoleHover,
             cursorTooltipBaseTheme,
-            underlineTheme,
+            errorUnderlineTheme,
+            warningUnderlineTheme,
             EditorView.editable.of(!readonly),
           ],
         });
@@ -476,7 +515,7 @@ export default function Editor({
         codeMirrorRef.current.focus();
         setCodeHistory(codeMirrorRef, commandHistory);
         setText(codeMirrorRef, content);
-        setErrors(codeMirrorRef, errors);
+        setConsoleOutputs(codeMirrorRef, consoleOutputs);
       }
     }, // eslint-disable-next-line react-hooks/exhaustive-deps
     [
@@ -504,7 +543,11 @@ export default function Editor({
   );
   return (
     <>
-      <div className="code-editor" ref={codeEditorRef} />
+      <div
+        className="code-editor"
+        style={{ height: "100%" }}
+        ref={codeEditorRef}
+      />
     </>
   );
 }

@@ -9,14 +9,14 @@ The goal of this library is to make writing and debugging tests iteratively easi
 
 Install the package via:
 
-```npm install react-testing-visualizer```
+```npm install testing-library-visualizer```
 
 If you want to have your app's styling and assets available while debugging then you should build the application and put the following in a jest setup file. If you're using Create React App the following can go into `setupTests.js`. If you don't have a file that sets up the jest context, you can [specify one](https://jestjs.io/docs/configuration#setupfiles-array). 
 
 ```javascript
 import {
   setup,
-} from "react-testing-visualizer";
+} from "testing-library-visualizer";
 import path from "path";
 import { expect } from "@jest/globals";
 import { screen, within, fireEvent } from "@testing-library/react";
@@ -32,7 +32,7 @@ registerCommands({ screen, within, fireEvent, userEvent, expect }); // This shou
 Once setup, debugging a test is simple. In the test file with the test you want to debug add:
 
 ```javascript
-import { debugTest } from "react-testing-visualizer";
+import { debugTest } from "testing-library-visualizer";
 ```
 
 Then replace `test` with `debugTest`. For example:
@@ -40,7 +40,7 @@ Then replace `test` with `debugTest`. For example:
 ```javascript
 import { render } from "@testing-library/react";
 import App from "./App";
-import { debugTest } from "react-testing-visualizer";
+import { debugTest } from "testing-library-visualizer";
 
 debugTest("Test App", async () => {
   render(<App />);
@@ -105,7 +105,7 @@ To do this you'll need to add the following to your jest test setup file.
 ```javascript
 import {
   registerStyling,
-} from "react-testing-visualizer";
+} from "testing-library-visualizer";
 
 registerStyling(/* <URL of styling> */);
 ```
@@ -119,7 +119,7 @@ In many projects you'll define custom commands that you will want to run in the 
 ```javascript
 import {
   registerCommands,
-} from "react-testing-visualizer";
+} from "testing-library-visualizer";
 
 registerCommands({
   test: () => {

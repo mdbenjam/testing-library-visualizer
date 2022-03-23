@@ -25,7 +25,9 @@ function refresh() {
 let IDENTIFIER_MAP = {
   highlight,
   refresh,
+  console,
 };
+
 export const registerCommands = (commands) => {
   IDENTIFIER_MAP = { ...IDENTIFIER_MAP, ...commands };
 };
@@ -133,39 +135,71 @@ export async function runCommand(
   });
 
   var lineNumber = 0;
+  let consoleOutputs = [];
+
+  function parseLogs(lineNumber, consoleOutputs) {
+    for (const consoleLog of consoleLogQueue) {
+      if (!consoleLog.seen) {
+        consoleLog.seen = true;
+
+        for (const arg of consoleLog.arguments) {
+          if (consoleLog.method === "error") {
+            consoleOutputs.push({
+              type: "error",
+              message: `Error printed to console.error. This error occurred asynchronously, and may have happened before this line was executed.\n\n${arg}`,
+              lineNumber,
+            });
+          } else {
+            consoleOutputs.push({
+              message: String(arg),
+              type: consoleLog.method,
+              lineNumber,
+            });
+          }
+        }
+      }
+    }
+  }
 
   try {
     if (parseTree.type !== "Program") {
       throw SyntaxError;
     }
 
-    for (const statement of parseTree.body) {
-      await evaluator.traverseTree(statement);
-      lineNumber += 1;
-    }
-    lineNumber -= 1;
-
     function delay(time) {
       return new Promise((resolve) => setTimeout(resolve, time));
     }
 
-    await delay(10);
+    for (const statement of parseTree.body) {
+      await evaluator.traverseTree(statement);
 
-    for (const consoleLog of consoleLogQueue) {
-      if (consoleLog.method === "error" && !consoleLog.seen) {
-        consoleLog.seen = true;
-        throw Error(
-          `Error printed to console.error. This error occurred asynchronously, and may have happened before this line was executed.\n\n${consoleLog.arguments[0]}`
-        );
-      }
+      parseLogs(lineNumber, consoleOutputs);
+      lineNumber += 1;
     }
 
-    return { ok: true, error: null, lineNumber: null };
+    lineNumber -= 1;
+    await delay(1);
+
+    // Run this again after the delay in case there are more messages
+    parseLogs(lineNumber, consoleOutputs);
+
+    return {
+      ok: true,
+      error: null,
+      consoleOutputs,
+    };
   } catch (error) {
     return {
       ok: false,
-      error: { ...error, message: removeUnicodeColor(error.message) },
-      lineNumber,
+      error: { ...error },
+      consoleOutputs: [
+        ...consoleOutputs,
+        {
+          type: "error",
+          message: removeUnicodeColor(error.message),
+          lineNumber,
+        },
+      ],
     };
   }
 }

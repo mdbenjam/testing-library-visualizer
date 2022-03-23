@@ -75,6 +75,7 @@ test("can render console logs in editor", async () => {
   );
 
   expect(screen.getByText("⚠️")).toBeInTheDocument();
+  // eslint-disable-next-line testing-library/no-node-access
   expect(screen.getByText("hello").parentNode).toHaveClass(
     "cm-underline-warning"
   );

@@ -86,12 +86,13 @@ var isListening = false;
 var manifest = {};
 var resetFunction = null;
 
-async function getCssFiles() {
+function loadManifest() {
   const manifestFileLocation = path.join(buildDirectory, "asset-manifest.json");
 
   if (fs.existsSync(manifestFileLocation)) {
     const rawdata = fs.readFileSync(manifestFileLocation);
     manifest = JSON.parse(rawdata).files;
+    registerStyling(manifest["main.css"]);
   } else {
     console.warn(
       "Could not find asset-manifest.json, this likely means you haven't run `npm run build` or you haven't called the setup function. Run `npm run build` in order to see styling and assets."
@@ -117,7 +118,7 @@ export function replaceFilePaths(html, manifest) {
 }
 
 function addStyleLinks(html) {
-  const cssFiles = [manifest["main.css"], ...registeredStyling];
+  const cssFiles = registeredStyling.filter((cssFile) => cssFile);
   const parser = new DOMParser();
   const newDoc = parser.parseFromString(html, "text/html");
 
@@ -125,7 +126,12 @@ function addStyleLinks(html) {
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.type = "text/css";
-    link.href = `${ASSET_DIRECTORY}/` + cssFile;
+    if (cssFile.indexOf("http://") === 0 || cssFile.indexOf("https://") === 0) {
+      link.href = cssFile;
+    } else {
+      link.href = `${ASSET_DIRECTORY}/` + cssFile;
+    }
+
     newDoc.head.appendChild(link);
   });
 
@@ -196,7 +202,7 @@ export const start = async (setupFunction) => {
     isListening = true;
     resetFunction = setupFunction;
 
-    await getCssFiles();
+    loadManifest();
     await setupFunction();
     await fastify.listen(3001);
     console.log_without_reporting(

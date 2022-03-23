@@ -1,6 +1,7 @@
 # Testing Library Visualizer
 
 ## Motivation
+
 [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) and the whole testing library family of tools has made testing frontends more rigorous and much simpler than it used to be. However, one of the persistent challenges when writing these tests is their debug-ability. When a test fails, testing library dumps the HTML into the console. It's often difficult to parse, and difficult to understand what made the test fail. Furthermore, interactively building up tests is complicated.
 
 The goal of this library is to make writing and debugging tests iteratively easier by showing you what your test is doing, and allowing you to interact with it.
@@ -9,14 +10,12 @@ The goal of this library is to make writing and debugging tests iteratively easi
 
 Install the package via:
 
-```npm install testing-library-visualizer```
+`npm install testing-library-visualizer`
 
-If you want to have your app's styling and assets available while debugging then you should build the application and put the following in a jest setup file. If you're using Create React App the following can go into `setupTests.js`. If you don't have a file that sets up the jest context, you can [specify one](https://jestjs.io/docs/configuration#setupfiles-array). 
+If you want to have your app's styling and assets available while debugging then you should build the application and put the following in a jest setup file. If you're using Create React App the following can go into `setupTests.js`. If you don't have a file that sets up the jest context, you can [specify one](https://jestjs.io/docs/configuration#setupfiles-array).
 
 ```javascript
-import {
-  setup,
-} from "testing-library-visualizer";
+import { setup } from "testing-library-visualizer";
 import path from "path";
 import { expect } from "@jest/globals";
 import { screen, within, fireEvent } from "@testing-library/react";
@@ -26,6 +25,13 @@ setup(path.join(__dirname, "..", "build")); // This should point to wherever you
 
 registerCommands({ screen, within, fireEvent, userEvent, expect }); // This should include any commands you want to run. See the custom command section below.
 ```
+
+For users using Create React App we automatically use the generated `asset-manifest.json` file to:
+
+1. Determine the compiled CSS file for the application
+2. Translate requests for assets (images etc) so the debug view pulls from the correct URL
+
+If you're not using CRA these things may not work out of the box. Feel free to create an issue as we'd like to support many different setups.
 
 ## Debugging a test
 
@@ -49,20 +55,18 @@ debugTest("Test App", async () => {
 
 When you run your test you'll see printed:
 
-```Debug server is running, open at 127.0.0.1:3001```
+`Debug server is running, open at 127.0.0.1:3001`
 
 Go to the URL and you should see the debug interface:
 
-
 https://user-images.githubusercontent.com/3885236/152245374-0a60bae9-974e-4d02-9979-001d2e8c9c8e.mp4
-
-
 
 From this interface you can run commands to interact with your test. Specifically, you can run the following built in commands:
 
 ```
 highlight
 refresh
+console
 ```
 
 And if you configured your test setup as specified above you'll have access to:
@@ -72,6 +76,7 @@ screen
 within
 userEvent
 fireEvent
+expect
 ```
 
 Highlight and refresh are defined by Testing Library Visualizer. `highlight` takes a HTML element(s) and draws boxes around them. This is a good way to understand what components you're selecting with your testing library commands. `refresh` asks for the latest state of the application. This is useful when an operation might take some time to complete, and you want to see the most up to date version of the component you're testing.
@@ -82,9 +87,7 @@ Using these commands you can build up a full test interactively.
 
 All errors are caught by the library and shown via the interactive editor. This enables you to see why commands failed while building up your test.
 
-
 https://user-images.githubusercontent.com/3885236/152245412-e7f47199-a494-4c4d-bc0d-fbc82bc0a7fb.mp4
-
 
 The library also reads from console.error and reports any errors printed out while running a command. These errors cannot be linked to a specific line, since they happen asynchronously, but the library reports them to the user as soon as it detects them. This is especially useful for catching [act warnings](https://kentcdodds.com/blog/fix-the-not-wrapped-in-act-warning).
 
@@ -94,32 +97,44 @@ The library maintains the list of commands run in the upper read only code edito
 
 ## Restarting Tests
 
-Clicking the `Reset Test` button will clear the dom and rerun the test code specified in the test file. This can be useful if you have lost track of the state of your test and would like to start over. Note, this doesn't actually cause Jest to rerun the test. Any changes made to the test code or underlying component will not be picked up. To get those changes you need to stop the test by clicking the `Stop Test` button and restarting it with Jest. Furthermore, if there is any other state in the test, that is not reset which can cause errors. (i.e. no before or after blocks are run.) 
+Clicking the `Reset Test` button will clear the dom and rerun the test code specified in the test file. This can be useful if you have lost track of the state of your test and would like to start over. Note, this doesn't actually cause Jest to rerun the test. Any changes made to the test code or underlying component will not be picked up. To get those changes you need to stop the test by clicking the `Stop Test` button and restarting it with Jest. Furthermore, if there is any other state in the test, clicking reset test will not clear that state which can cause errors. (i.e. no before or after blocks are run when you reset the test.)
 
 ## Custom Styling
 
-In many projects there are multiple sources for styling. While the default looks for a `manifest.json` generated by create react app's build process, you can add styling from other sources as well.
+In many projects there are multiple sources for styling. While by default we look for a `manifest.json` generated by Create React App's build process, you can add styling from other sources as well.
 
 To do this you'll need to add the following to your jest test setup file.
 
 ```javascript
-import {
-  registerStyling,
-} from "testing-library-visualizer";
+import { registerStyling } from "testing-library-visualizer";
 
 registerStyling(/* <URL of styling> */);
 ```
 
-You can specify a URL hosted by a server, or a URL that points to the static build assets defined by the `setup` command above. This means you can just copy a CSS file into your build folder, and specify the URL path using the `registerStyling` function to pick it up.
+You can specify a URL hosted by a server, or a path that points to the static built assets in a directory defined by the `setup` command above. This means you can just copy a CSS file into your build folder, and specify the path using the `registerStyling` function to pick it up.
+
+Specifying a file in the build directory would look something like this:
+
+```
+registerStyling("static/css/test.css")
+```
+
+Where the build folder has sub folders `static/css` and where `test.css` is in that folder.
+
+Specifying a URL would look something like this:
+
+```
+registerStyling("http://some-url.com/css/css-file.css)
+```
+
+It must start with an `http` or `https` to be considered an absolute URL.
 
 ## Custom Commands
 
 In many projects you'll define custom commands that you will want to run in the interactive debug mode. To add commands you'll need to add the following to you jest setup file.
 
 ```javascript
-import {
-  registerCommands,
-} from "testing-library-visualizer";
+import { registerCommands } from "testing-library-visualizer";
 
 registerCommands({
   test: () => {
@@ -129,4 +144,3 @@ registerCommands({
 ```
 
 You can pass an object to `registerCommands` where each key is the name of the command, and the value is the function it will run when invoked.
-

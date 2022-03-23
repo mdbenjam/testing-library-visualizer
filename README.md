@@ -133,7 +133,7 @@ You can pass an object to `registerCommands` where each key is the name of the c
 ## Shortcuts
 
 | Key | Shortcut|
----
+|---|---|
 | Ctrl + Arrow Up/Down (Mac: Alt + Arrow Up/Down) | Navigate history |
 | Ctrl + Enter (Mac: Cmd + Enter) | Submit command |
 | Esc then Tab | Tab out of the command editor. Without hitting escape first, tab acts to indent |

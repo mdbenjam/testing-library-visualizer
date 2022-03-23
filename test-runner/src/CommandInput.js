@@ -181,6 +181,10 @@ function CommandInput({ setInnerHTML, availableCommands }) {
         </button>
         <button onClick={() => axios.post("/stop")}>Stop Test</button>
       </div>
+      <p className="tab-instruction">
+        Note the tab key is used to indent inside the editor. Hit esc then tab
+        to escape.
+      </p>
     </>
   );
 }

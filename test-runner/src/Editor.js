@@ -1,5 +1,4 @@
 import { useEffect, useCallback, useRef, useMemo } from "react";
-
 import {
   keymap,
   highlightSpecialChars,
@@ -19,7 +18,7 @@ import {
   gutter,
   GutterMarker,
 } from "@codemirror/gutter";
-import { defaultKeymap } from "@codemirror/commands";
+import { defaultKeymap, indentWithTab } from "@codemirror/commands";
 import { bracketMatching } from "@codemirror/matchbrackets";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/closebrackets";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
@@ -432,14 +431,12 @@ export default function Editor({
 
         const previousCommandsKeyMap = [
           {
-            key: "Ctrl-ArrowUp",
-            mac: "Cmd-ArrowUp",
+            key: "Mod-ArrowUp",
             run: ctrlCursorArrowUp,
             preventDefault: true,
           },
           {
-            key: "Ctrl-ArrowDown",
-            mac: "Cmd-ArrowDown",
+            key: "Mod-ArrowDown",
             run: ctrlCursorArrowDown,
             preventDefault: true,
           },
@@ -447,8 +444,7 @@ export default function Editor({
 
         const sendCommandKeyMap = [
           {
-            key: "Ctrl-Enter",
-            mac: "Cmd-Enter",
+            key: "Mod-Enter",
             run: ({ state }) => {
               state.field(submitFunctionState).submit();
             },
@@ -486,6 +482,7 @@ export default function Editor({
               ...completionKeymap,
               ...lintKeymap,
               ...previousCommandsKeyMap,
+              indentWithTab,
             ]),
             javascript(),
             autocompletion({ override: [myCompletions] }),
@@ -499,7 +496,7 @@ export default function Editor({
             cursorTooltipBaseTheme,
             errorUnderlineTheme,
             warningUnderlineTheme,
-            EditorView.editable.of(!readonly),
+            EditorState.readOnly.of(readonly),
           ],
         });
         if (

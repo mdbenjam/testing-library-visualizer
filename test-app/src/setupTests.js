@@ -4,7 +4,7 @@
 // learn more: https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom";
 import {
-  registerStyling,
+  // registerStyling,
   setup,
   registerCommands,
 } from "testing-library-visualizer";
@@ -14,6 +14,11 @@ import userEvent from "@testing-library/user-event";
 
 setup(path.join(__dirname, "..", "build"));
 
-registerStyling("static/css/test.css");
+// Example of importing styling placed in the build folder
+// registerStyling("static/css/test.css");
+// Example of importing styling from a URL
+// registerStyling(
+//   "https://www.test-website.org/media/css/styling-file.css"
+// );
 
 registerCommands({ screen, within, fireEvent, userEvent, expect });

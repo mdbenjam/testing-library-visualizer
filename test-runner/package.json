@@ -30,7 +30,7 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-scripts": "^5.0.0",
-    "testing-library-visualizer": "file:../package",
+    "testing-library-visualizer": "^1.0.3",
     "web-vitals": "^2.1.2"
   },
   "proxy": "http://localhost:3001",

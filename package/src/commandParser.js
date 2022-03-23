@@ -174,7 +174,6 @@ export async function runCommand(
       }
       lineNumber += 1;
     }
-    // lineNumber -= 1;
 
     return {
       ok: true,

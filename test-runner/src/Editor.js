@@ -201,8 +201,6 @@ const consoleHover = hoverTooltip((view, pos, side) => {
   let { from, to } = view.state.doc.lineAt(pos);
   for (let iter = state.iter(); iter.value !== null; iter.next()) {
     if (from === iter.from) {
-      // console.log(iter.value.data);
-
       return {
         pos: from,
         end: to,
@@ -248,7 +246,7 @@ const warningUnderlineTheme = EditorView.baseTheme({
 
 const setCodeHistory = (codeMirrorRef, commandHistory) => {
   if (!codeMirrorRef.current) return;
-  // console.log("settingCodeHistory");
+
   codeMirrorRef.current.dispatch({
     effects: [
       updateCommandHistoryEffect.of({ commandHistory }),

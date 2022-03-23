@@ -61,7 +61,7 @@ export const debuggerSetup = async (fn) => {
     consoleLogQueue.push({ method: "log", arguments: arguments });
     return _log.apply(console, arguments);
   };
-  console.orig_log = function () {
+  console.log_without_reporting = function () {
     return _log.apply(console, arguments);
   };
 
@@ -199,7 +199,9 @@ export const start = async (setupFunction) => {
     await getCssFiles();
     await setupFunction();
     await fastify.listen(3001);
-    console.log("Debug server is running, open at localhost:3001");
+    console.log_without_reporting(
+      "Debug server is running, open at localhost:3001"
+    );
     while (isListening) {
       await sleep(50);
     }

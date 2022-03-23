@@ -8,7 +8,6 @@ const HISTORY_KEY = "HISTORY";
 const TEST_HISTORY_KEY = "TEST_HISTORY";
 
 function combineConsoleOutputs(consoleOutputs) {
-  console.log(consoleOutputs);
   return consoleOutputs
     .map((output) =>
       output.type === "error"
@@ -16,19 +15,6 @@ function combineConsoleOutputs(consoleOutputs) {
         : `Output: ${output.message}`
     )
     .join("\n\n");
-}
-
-function combineOutputsType(consoleOutputs) {
-  return consoleOutputs.some((output) => output.type === "error")
-    ? "error"
-    : "log";
-}
-
-function groupByLineNumber(consoleOutputs) {
-  return consoleOutputs.reduce((acc, output) => {
-    acc[output.lineNumber] = [...(acc[output.lineNumber] || []), output];
-    return acc;
-  }, {});
 }
 
 function CommandInput({ setInnerHTML, availableCommands }) {
@@ -76,14 +62,11 @@ function CommandInput({ setInnerHTML, availableCommands }) {
               consoleOutputs: response.data.consoleOutputs
                 ? [
                     ...editor.consoleOutputs,
-                    ...Object.entries(
-                      groupByLineNumber(response.data.consoleOutputs)
-                    ).map(([lineNumber, outputs]) => ({
-                      message: combineConsoleOutputs(outputs),
-                      type: combineOutputsType(outputs),
+                    ...response.data.consoleOutputs.map((output) => ({
+                      message: output.message,
+                      type: output.type,
                       lineNumber:
-                        parseInt(lineNumber) +
-                        editor.content.split("\n").length,
+                        output.lineNumber + editor.content.split("\n").length,
                     })),
                   ]
                 : [...editor.consoleOutputs],

@@ -142,39 +142,39 @@ export async function runCommand(
       throw SyntaxError;
     }
 
-    for (const statement of parseTree.body) {
-      await evaluator.traverseTree(statement);
-      lineNumber += 1;
-    }
-    lineNumber -= 1;
-
     function delay(time) {
       return new Promise((resolve) => setTimeout(resolve, time));
     }
 
-    await delay(10);
+    for (const statement of parseTree.body) {
+      await evaluator.traverseTree(statement);
 
-    for (const consoleLog of consoleLogQueue) {
-      if (!consoleLog.seen) {
-        consoleLog.seen = true;
+      await delay(1);
 
-        for (const arg of consoleLog.arguments) {
-          if (consoleLog.method === "error") {
-            consoleOutputs.push({
-              type: "error",
-              message: `Error printed to console.error. This error occurred asynchronously, and may have happened before this line was executed.\n\n${arg}`,
-              lineNumber: 0,
-            });
-          } else {
-            consoleOutputs.push({
-              message: String(arg),
-              type: consoleLog.method,
-              lineNumber: 0,
-            });
+      for (const consoleLog of consoleLogQueue) {
+        if (!consoleLog.seen) {
+          consoleLog.seen = true;
+
+          for (const arg of consoleLog.arguments) {
+            if (consoleLog.method === "error") {
+              consoleOutputs.push({
+                type: "error",
+                message: `Error printed to console.error. This error occurred asynchronously, and may have happened before this line was executed.\n\n${arg}`,
+                lineNumber,
+              });
+            } else {
+              consoleOutputs.push({
+                message: String(arg),
+                type: consoleLog.method,
+                lineNumber,
+              });
+            }
           }
         }
       }
+      lineNumber += 1;
     }
+    // lineNumber -= 1;
 
     return {
       ok: true,

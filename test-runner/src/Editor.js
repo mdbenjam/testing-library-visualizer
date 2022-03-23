@@ -116,7 +116,7 @@ class ErrorGutterMarker extends GutterMarker {
   }
 
   toDOM() {
-    return document.createTextNode("🛑");
+    return document.createTextNode("🔴");
   }
 }
 class WarnGutterMarker extends GutterMarker {
@@ -129,7 +129,8 @@ class WarnGutterMarker extends GutterMarker {
     return document.createTextNode("⚠️");
   }
 }
-const underlineMark = Decoration.mark({ class: "cm-underline" });
+const underlineErrorMark = Decoration.mark({ class: "cm-underline-error" });
+const underlineWarningMark = Decoration.mark({ class: "cm-underline-warning" });
 
 const consoleEffect = StateEffect.define({});
 const consoleState = StateField.define({
@@ -168,11 +169,16 @@ const consoleState = StateField.define({
     return EditorView.decorations.from(field, (value) => {
       let marks = Decoration.none;
       for (let iter = value.iter(); iter.value !== null; iter.next()) {
-        // console.log(underlineMark, iter.from, iter.to, iter);
         if (iter.to > iter.from) {
-          marks = marks.update({
-            add: [underlineMark.range(iter.from, iter.to)],
-          });
+          if (iter.value.data.type === "error") {
+            marks = marks.update({
+              add: [underlineErrorMark.range(iter.from, iter.to)],
+            });
+          } else {
+            marks = marks.update({
+              add: [underlineWarningMark.range(iter.from, iter.to)],
+            });
+          }
         }
       }
 
@@ -204,9 +210,9 @@ const consoleHover = hoverTooltip((view, pos, side) => {
         create(view) {
           let dom = document.createElement("div");
           dom.className = "cm-tooltip-error";
-          dom.innerHTML = `<p><ul>${iter.value.data.value
-            .split("\n\n")
-            .map((val) => `<li>${val}</li>`)}</ul></p>`;
+          dom.innerHTML = iter.value.data.value
+            .map((message) => `<p>${message}</p>`)
+            .join("");
           return { dom };
         },
       };
@@ -232,8 +238,12 @@ const errorGutter = [
   }),
 ];
 
-const underlineTheme = EditorView.baseTheme({
-  ".cm-underline": { textDecoration: "underline 1px red wavy" },
+const errorUnderlineTheme = EditorView.baseTheme({
+  ".cm-underline-error": { textDecoration: "underline 1px red wavy" },
+});
+
+const warningUnderlineTheme = EditorView.baseTheme({
+  ".cm-underline-warning": { textDecoration: "underline 1px #ccac01 wavy" },
 });
 
 const setCodeHistory = (codeMirrorRef, commandHistory) => {
@@ -267,15 +277,30 @@ const setText = (codeMirrorRef, content) => {
   codeMirrorRef.current.dispatch({ effects: scrollEffect });
 };
 
+function combineOutputsType(consoleOutputs) {
+  return consoleOutputs.some((output) => output.type === "error")
+    ? "error"
+    : "log";
+}
+
+function groupByLineNumber(consoleOutputs) {
+  return consoleOutputs.reduce((acc, output) => {
+    acc[output.lineNumber] = [...(acc[output.lineNumber] || []), output];
+    return acc;
+  }, {});
+}
+
 const setConsoleOutputs = (codeMirrorRef, consoleOutputs) => {
   if (!codeMirrorRef.current || !consoleOutputs) return;
 
-  const effects = consoleOutputs.map((output) => {
+  const outputsByLine = groupByLineNumber(consoleOutputs);
+
+  const effects = Object.entries(outputsByLine).map(([lineNumber, outputs]) => {
     return consoleEffect.of({
-      from: codeMirrorRef.current.state.doc.line(output.lineNumber).from,
-      to: codeMirrorRef.current.state.doc.line(output.lineNumber).to,
-      value: output.message,
-      type: output.type,
+      from: codeMirrorRef.current.state.doc.line(lineNumber).from,
+      to: codeMirrorRef.current.state.doc.line(lineNumber).to,
+      value: outputs.map((output) => output.message),
+      type: combineOutputsType(outputs),
     });
   });
 
@@ -474,7 +499,8 @@ export default function Editor({
             commandHistoryState,
             consoleHover,
             cursorTooltipBaseTheme,
-            underlineTheme,
+            errorUnderlineTheme,
+            warningUnderlineTheme,
             EditorView.editable.of(!readonly),
           ],
         });

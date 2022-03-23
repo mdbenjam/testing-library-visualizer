@@ -13,11 +13,13 @@ test("can render errors in editor", async () => {
   render(
     <EditorWrapper
       content="hello world\ngoodbye"
-      errors={[{ message: "This is an error", line: 1 }]}
+      consoleOutputs={[
+        { message: "This is an error", lineNumber: 1, type: "error" },
+      ]}
     />
   );
 
-  const errorSymbols = screen.queryAllByText("🛑");
+  const errorSymbols = screen.queryAllByText("🔴");
   expect(errorSymbols[0]).toHaveStyle({ visibility: "hidden" });
   expect(errorSymbols[1]).toBeInTheDocument();
 });
@@ -28,7 +30,9 @@ test("can render error tooltip in editor", async () => {
   render(
     <EditorWrapper
       content="hello world\ngoodbye"
-      errors={[{ message: "This is an error", line: 1 }]}
+      consoleOutputs={[
+        { message: "This is an error", lineNumber: 1, type: "error" },
+      ]}
     />
   );
   await user.hover(await screen.findByText(/hello/));
@@ -47,7 +51,9 @@ test("command history is reset when changed", async () => {
 
   rerender(
     <EditorWrapper
-      errors={[{ message: "This is an error", line: 1 }]}
+      consoleOutputs={[
+        { message: "This is an error", lineNumber: 1, type: "error" },
+      ]}
       commandHistory={["new", "old"]}
     />
   );
@@ -56,4 +62,20 @@ test("command history is reset when changed", async () => {
   await user.keyboard("[ControlLeft>][ArrowUp][/ControlLeft]");
 
   await expect(await screen.findByText(/new/)).toBeInTheDocument();
+});
+
+test("can render console logs in editor", async () => {
+  render(
+    <EditorWrapper
+      content="hello"
+      consoleOutputs={[
+        { message: "This is a log", lineNumber: 1, type: "log" },
+      ]}
+    />
+  );
+
+  expect(screen.getByText("⚠️")).toBeInTheDocument();
+  expect(screen.getByText("hello").parentNode).toHaveClass(
+    "cm-underline-warning"
+  );
 });

@@ -124,7 +124,6 @@ function CommandInput({ setInnerHTML, availableCommands }) {
             lineNumber: output.lineNumber + currentLine,
           })),
         ];
-        console.log(acc.consoleOutputs, editor.consoleOutputs);
 
         return acc;
       },
@@ -136,7 +135,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
     <>
       <ErrorBoundary>
         <h1 className="code-window-titles">Code History</h1>
-        <div className="editor-div">
+        <div className="editor-div" data-testid="command-history">
           <Editor
             content={existingContent.content}
             availableCommands={availableCommands}
@@ -145,7 +144,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
           />
         </div>
         <h1 className="code-window-titles">Output</h1>
-        <div className="editor-div">
+        <div className="editor-div" data-testid="command-output">
           <Editor
             content={output}
             availableCommands={availableCommands}
@@ -153,7 +152,7 @@ function CommandInput({ setInnerHTML, availableCommands }) {
           />
         </div>
         <h1 className="code-window-titles">Code Input</h1>
-        <div className="editor-div">
+        <div className="editor-div" data-testid="command-input">
           <Editor
             content={editorValue}
             onContentChange={setEditorValue}

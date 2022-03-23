@@ -1,9 +1,9 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import App from "./App";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
 import userEvent from "@testing-library/user-event";
-
+import { debugTest } from "testing-library-visualizer";
 let mockAxios = null;
 
 beforeEach(() => {
@@ -42,9 +42,12 @@ test("can send command", async () => {
     "<style type='text/css'>.react-test-highlight-element {border: 1px solid red;flex: 1;}</style><div>Hello World</div>"
   );
 
-  await user.click(screen.getAllByRole("textbox")[1]);
+  await user.click(
+    within(screen.getByTestId("command-input")).getByRole("textbox")
+  );
   mockAxios.onPost("/command", { command: "refresh()" }).reply(200, {
     html: "<div>Goodbye</div>",
+    consoleOutputs: [],
   });
 
   await user.keyboard("refresh()");
@@ -57,7 +60,39 @@ test("can send command", async () => {
     )
   );
 
-  expect(screen.getAllByRole("textbox")[0]).toHaveTextContent(/refresh\(\)/);
+  expect(
+    within(screen.getByTestId("command-history")).getByRole("textbox")
+  ).toHaveTextContent(/refresh\(\)/);
+});
+
+test("can see command output", async () => {
+  const user = userEvent.setup();
+  mockAxios.onGet("/load").reply(200, {
+    html: "<div>Hello World</div>",
+    availableCommands: {},
+  });
+
+  render(<App />);
+
+  expect(await screen.findByTitle("test-page-content")).toHaveAttribute(
+    "srcDoc",
+    "<style type='text/css'>.react-test-highlight-element {border: 1px solid red;flex: 1;}</style><div>Hello World</div>"
+  );
+
+  mockAxios.onPost("/command", { command: "refresh()" }).reply(200, {
+    html: "<div>Goodbye</div>",
+    consoleOutputs: [{ message: "Hello World", lineNumber: 0, type: "log" }],
+  });
+
+  await user.click(
+    within(screen.getByTestId("command-input")).getByRole("textbox")
+  );
+  await user.keyboard("refresh()");
+  await user.click(screen.getByText("Submit"));
+
+  // expect(
+  //   await within(screen.getByTestId("command-output")).findByRole("textbox")
+  // ).toHaveTextContent(/Output: Hello World/);
 });
 
 test("sets available commands", async () => {
@@ -74,7 +109,9 @@ test("sets available commands", async () => {
     "<style type='text/css'>.react-test-highlight-element {border: 1px solid red;flex: 1;}</style><div>Hello World</div>"
   );
 
-  await user.click(screen.getAllByRole("textbox")[1]);
+  await user.click(
+    within(screen.getByTestId("command-input")).getByRole("textbox")
+  );
 
   await user.keyboard("scr");
   await user.click(await screen.findByText("een"));
@@ -96,16 +133,21 @@ test("resetting test updates command history", async () => {
     "<style type='text/css'>.react-test-highlight-element {border: 1px solid red;flex: 1;}</style><div>Hello World</div>"
   );
 
-  await user.click(screen.getAllByRole("textbox")[1]);
+  await user.click(
+    within(screen.getByTestId("command-input")).getByRole("textbox")
+  );
   mockAxios.onPost("/command", { command: "refresh()" }).reply(200, {
     html: "<div>Goodbye</div>",
+    consoleOutputs: [],
   });
 
   await user.keyboard("refresh()");
   await user.click(screen.getByText("Submit"));
 
   await waitFor(() =>
-    expect(screen.getAllByRole("textbox")[0]).toHaveTextContent(/refresh\(\)/)
+    expect(
+      within(screen.getByTestId("command-history")).getByRole("textbox")
+    ).toHaveTextContent(/refresh\(\)/)
   );
 
   mockAxios.onPost("/reset").reply(200, {
@@ -113,17 +155,21 @@ test("resetting test updates command history", async () => {
   });
   await user.click(screen.getByText(/Reset Test/));
 
-  await user.click(screen.getAllByRole("textbox")[1]);
+  await user.click(
+    within(screen.getByTestId("command-input")).getByRole("textbox")
+  );
   await user.keyboard("refresh()");
   await user.click(screen.getByText("Submit"));
 
-  expect(screen.getAllByRole("textbox")[0]).toHaveTextContent(
+  expect(
+    within(screen.getByTestId("command-history")).getByRole("textbox")
+  ).toHaveTextContent(
     /refresh\(\).*\/\/ <------ Test Reset ------>.*refresh\(\)/
   );
 
   expect(window.localStorage.setItem).toHaveBeenLastCalledWith(
     "TEST_HISTORY",
-    '[{"content":"refresh()\\n","errors":[],"wasReset":true},{"content":"refresh()\\n","errors":[]}]'
+    '[{"content":"refresh()\\n","consoleOutputs":[],"wasReset":true},{"content":"refresh()\\n","consoleOutputs":[]}]'
   );
 });
 
@@ -141,23 +187,32 @@ test("can use arrows for command history", async () => {
     "<style type='text/css'>.react-test-highlight-element {border: 1px solid red;flex: 1;}</style><div>Hello World</div>"
   );
 
-  await user.click(screen.getAllByRole("textbox")[1]);
+  await user.click(
+    within(screen.getByTestId("command-input")).getByRole("textbox")
+  );
   mockAxios.onPost("/command", { command: "refresh()" }).reply(200, {
     html: "<div>Goodbye</div>",
+    consoleOutputs: [],
   });
 
   await user.keyboard("refresh()");
   await user.click(screen.getByText("Submit"));
 
   await waitFor(() =>
-    expect(screen.getAllByRole("textbox")[0]).toHaveTextContent(/refresh\(\)/)
+    expect(
+      within(screen.getByTestId("command-history")).getByRole("textbox")
+    ).toHaveTextContent(/refresh\(\)/)
   );
 
-  await user.click(screen.getAllByRole("textbox")[1]);
+  await user.click(
+    within(screen.getByTestId("command-input")).getByRole("textbox")
+  );
   await user.keyboard("[ControlLeft>][ArrowUp][/ControlLeft]");
 
   await waitFor(() =>
-    expect(screen.getAllByRole("textbox")[1]).toHaveTextContent(/refresh\(\)/)
+    expect(
+      within(screen.getByTestId("command-input")).getByRole("textbox")
+    ).toHaveTextContent(/refresh\(\)/)
   );
 
   expect(window.localStorage.setItem).toHaveBeenCalledWith(

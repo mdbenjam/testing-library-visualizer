@@ -6,6 +6,12 @@
 
 The goal of this library is to make writing and debugging tests iteratively easier by showing you what your test is doing, and allowing you to interact with it.
 
+
+https://user-images.githubusercontent.com/3885236/159789963-48f9d4df-3f99-4ea8-b366-2d1dec1b445d.mp4
+
+
+
+
 ## Setup
 
 Install the package via:
